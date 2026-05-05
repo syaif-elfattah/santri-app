@@ -47,20 +47,21 @@ function ListInput({
   placeholder?: string
 }) {
   // Parse string multiline ke array, menjaga baris kosong agar bisa diketik
+
   const toItems = (v: string) => {
-    if (!v) return ['']
-    return v.split('\n').map(l => l.replace(/^•\s*/, '').trim())
-  }
+  if (!v) return ['']
+  return v.split('\n').map(l => l.replace(/^•\s*/, '')) // Hapus .trim() agar spasi tidak hilang
+}
 
   const fromItems = (items: string[]) => items.join('\n')
   const items = toItems(value)
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
 
   const update = (idx: number, val: string) => {
-    const next = [...items]
-    next[idx] = val
-    onChange(fromItems(next))
-  }
+  const next = [...items]
+  next[idx] = val // Langsung masukkan nilainya saja
+  onChange(fromItems(next))
+}
 
   const addItem = () => {
     onChange(fromItems([...items, '']))
