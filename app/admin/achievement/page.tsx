@@ -222,13 +222,17 @@ function AchievementCard({ item, motivasi }: { item: SantriData; motivasi: strin
           </div>
         </div>
 
-        {/* Footer ayat */}
-        <div style={{borderTop:'1px solid #e5e7eb',paddingTop:'3mm',textAlign:'center'}}>
-          <div style={{fontSize:'6.5pt',color:'#aaa',fontStyle:'italic',lineHeight:1.7}}>
+        {/* Footer TTD */}
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-end',borderTop:'1px solid #e5e7eb',paddingTop:'3mm'}}>
+          <div style={{fontSize:'6.5pt',color:'#aaa',fontStyle:'italic',maxWidth:'55%',lineHeight:1.6}}>
             "Dan barangsiapa yang bersungguh-sungguh di jalan Kami, maka Kami akan tunjukkan kepada mereka jalan-jalan Kami."
-            <span style={{color:'#B8860B',display:'block',marginTop:'1mm'}}>(QS. Al-&#39;Ankabut: 69)</span>
+            <span style={{color:'#B8860B',display:'block',marginTop:'1mm'}}>(QS. Al-'Ankabut: 69)</span>
           </div>
-        </div>
+          <div style={{textAlign:'center'}}>
+            <div style={{fontSize:'6.5pt',color:'#666',marginBottom:'8mm'}}>Kudus, .............. 2026</div>
+            <div style={{width:35,borderTop:'1px solid #555',margin:'0 auto 1mm'}}/>
+            <div style={{fontSize:'6.5pt',color:'#555',fontWeight:'bold'}}>Musyrif / Musyrifah</div>
+          </div>
         </div>
 
       </div>
