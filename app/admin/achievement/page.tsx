@@ -93,7 +93,7 @@ function buildCardHTML(item: SantriItem, motivasi: string, tanggal: string): str
   body{width:210mm;min-height:297mm;font-family:'Poppins',sans-serif;background:#fff}
   .page{
     width:210mm;min-height:297mm;position:relative;
-    display:flex;flex-direction:column;padding:16mm 15mm 12mm;
+    display:flex;flex-direction:column;padding:16mm 15mm 16mm;
     background:#fff;overflow:hidden;
   }
   /* border emas */
@@ -168,7 +168,7 @@ function buildCardHTML(item: SantriItem, motivasi: string, tanggal: string): str
   .motivasi-title{font-size:6.5pt;font-weight:600;color:#B8860B;letter-spacing:2px;text-transform:uppercase;margin-bottom:1.5mm}
   .motivasi-text{font-size:7.5pt;font-weight:300;color:#555;font-style:italic;line-height:1.8}
   /* footer */
-  .footer{border-top:1px solid #e5e7eb;padding-top:2.5mm;display:flex;justify-content:space-between;align-items:center}
+  .footer{border-top:1px solid #e5e7eb;padding-top:3mm;margin-top:auto;margin-bottom:2mm;display:flex;justify-content:space-between;align-items:center}
   .ayat{font-size:6.5pt;font-weight:300;color:#aaa;font-style:italic;line-height:1.7;max-width:65%}
   .ayat-ref{color:#B8860B;display:block;margin-top:1mm;font-weight:500}
   .tgl{font-size:7pt;font-weight:500;color:#888;text-align:right}
