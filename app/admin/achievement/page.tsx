@@ -87,19 +87,20 @@ function buildCardHTML(item: SantriItem, motivasi: string, tanggal: string): str
 <head>
 <meta charset="UTF-8"/>
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&display=swap');
   *{box-sizing:border-box;margin:0;padding:0}
   @page{size:A4 portrait;margin:0}
-  body{width:210mm;min-height:297mm;font-family:Georgia,'Times New Roman',serif;background:#fff}
+  body{width:210mm;min-height:297mm;font-family:'Poppins',sans-serif;background:#fff}
   .page{
     width:210mm;min-height:297mm;position:relative;
-    display:flex;flex-direction:column;padding:18mm 16mm 14mm;
+    display:flex;flex-direction:column;padding:16mm 15mm 12mm;
     background:#fff;overflow:hidden;
   }
   /* border emas */
   .border-outer{position:absolute;inset:8mm;border:2.5px solid #B8860B;border-radius:4px;pointer-events:none}
   .border-inner{position:absolute;inset:13mm;border:1px solid #D4AF37;border-radius:2px;pointer-events:none}
   /* corner */
-  .c{position:absolute;width:22px;height:22px;border-color:#B8860B;border-style:solid}
+  .c{position:absolute;width:24px;height:24px;border-color:#B8860B;border-style:solid}
   .c-tl{top:4mm;left:4mm;border-width:4px 0 0 4px}
   .c-tr{top:4mm;right:4mm;border-width:4px 4px 0 0}
   .c-bl{bottom:4mm;left:4mm;border-width:0 0 4px 4px}
@@ -108,69 +109,69 @@ function buildCardHTML(item: SantriItem, motivasi: string, tanggal: string): str
   .wm{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);
       font-size:70px;opacity:0.03;color:#1a5c3a;font-weight:bold;white-space:nowrap;letter-spacing:8px;pointer-events:none}
   /* content */
-  .content{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;gap:4mm}
+  .content{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;gap:3.5mm}
   /* header */
-  .logo{width:65px;height:65px;object-fit:contain;display:block;margin:0 auto 3mm}
-  .inst{font-size:7.5pt;letter-spacing:3px;color:#666;text-transform:uppercase;text-align:center;margin-bottom:1mm}
-  .title{font-size:24pt;font-weight:bold;color:#1a3a2a;letter-spacing:4px;text-align:center;margin-bottom:1mm}
+  .logo{width:68px;height:68px;object-fit:contain;display:block;margin:0 auto 2.5mm}
+  .inst{font-size:7.5pt;font-weight:500;letter-spacing:3px;color:#555;text-transform:uppercase;text-align:center;margin-bottom:1mm}
+  .title{font-size:26pt;font-weight:700;color:#1a3a2a;letter-spacing:5px;text-align:center;margin-bottom:1mm}
   .divider{display:flex;align-items:center;justify-content:center;gap:6px;margin:1mm 0}
-  .divider-line{height:1px;width:35px;background:linear-gradient(to right,transparent,#B8860B)}
+  .divider-line{height:1px;width:38px;background:linear-gradient(to right,transparent,#B8860B)}
   .divider-line.r{background:linear-gradient(to left,transparent,#B8860B)}
-  .subtitle{font-size:7.5pt;color:#888;font-style:italic;text-align:center}
+  .subtitle{font-size:7.5pt;font-weight:300;color:#888;font-style:italic;text-align:center}
   /* nama box */
   .nama-box{
     background:linear-gradient(135deg,#f9f6ed,#fdf8ef);
     border:1.5px solid #D4AF37;border-radius:8px;padding:4mm 8mm;text-align:center;
     box-shadow:0 2px 8px rgba(184,134,11,.1)
   }
-  .diberikan{font-size:7pt;color:#999;letter-spacing:3px;text-transform:uppercase;margin-bottom:2mm}
-  .nama{font-size:19pt;font-weight:bold;color:#1a5c3a;margin-bottom:1.5mm}
-  .kelas-txt{font-size:8.5pt;color:#666}
+  .diberikan{font-size:7pt;font-weight:500;color:#999;letter-spacing:3px;text-transform:uppercase;margin-bottom:2mm}
+  .nama{font-size:20pt;font-weight:700;color:#1a5c3a;margin-bottom:1.5mm;line-height:1.2}
+  .kelas-txt{font-size:8.5pt;font-weight:400;color:#666}
   /* grid 3 kolom */
   .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:3mm;flex:1}
   .col{border-radius:7px;overflow:hidden;display:flex;flex-direction:column}
   /* col headers */
   .col-hdr{padding:2.5mm;text-align:center}
-  .col-hdr-title{font-size:7pt;font-weight:bold;color:#fff;letter-spacing:1.5px;text-transform:uppercase}
-  .col-hdr-sub{font-size:6pt;letter-spacing:1px;text-transform:uppercase;margin-top:1px}
+  .col-hdr-title{font-size:7.5pt;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase}
+  .col-hdr-sub{font-size:6.5pt;font-weight:400;letter-spacing:0.5px;text-transform:uppercase;margin-top:1px}
   /* tahfidz */
   .col-tahfidz{border:1.5px solid #B8860B}
   .col-tahfidz .col-hdr{background:linear-gradient(135deg,#78350f,#b45309)}
   .col-tahfidz .col-hdr-sub{color:#fef3c7}
-  .col-tahfidz .col-body{background:#fffbeb;flex:1;padding:3mm;font-size:7.5pt;color:#78350f}
-  .total-box{background:linear-gradient(135deg,#B8860B,#D4AF37);border-radius:5px;padding:2mm;text-align:center;margin-bottom:2mm}
-  .total-label{font-size:5.5pt;color:#fff8e1;letter-spacing:1px;text-transform:uppercase}
-  .total-num{font-size:15pt;font-weight:bold;color:#fff;line-height:1.1}
-  .total-unit{font-size:6.5pt;color:#fef9c3;font-weight:bold}
-  .juz-row{display:flex;align-items:center;gap:2mm;margin-bottom:1mm;font-size:7pt}
+  .col-tahfidz .col-body{background:#fffbeb;flex:1;padding:3mm;font-size:8pt;color:#78350f}
+  .total-box{background:linear-gradient(135deg,#B8860B,#D4AF37);border-radius:5px;padding:2.5mm;text-align:center;margin-bottom:2.5mm}
+  .total-label{font-size:6pt;font-weight:500;color:#fff8e1;letter-spacing:1px;text-transform:uppercase}
+  .total-num{font-size:17pt;font-weight:700;color:#fff;line-height:1.1}
+  .total-unit{font-size:7pt;font-weight:600;color:#fef9c3}
+  .juz-row{display:flex;align-items:center;gap:2mm;margin-bottom:1.5mm;font-size:7.5pt;font-weight:400}
   /* non tahfidz */
   .col-non{border:1.5px solid #1a5c3a}
   .col-non .col-hdr{background:linear-gradient(135deg,#14532d,#1a5c3a)}
   .col-non .col-hdr-sub{color:#bbf7d0}
-  .col-non .col-body{background:#f0fdf4;flex:1;padding:3mm;font-size:7pt;color:#14532d}
-  .non-juara{font-weight:bold;display:flex;gap:2mm;align-items:flex-start;margin-bottom:1px}
-  .non-detail{color:#166534;margin-left:5mm}
-  .non-small{color:#6b7280;font-size:6.5pt;margin-left:5mm}
+  .col-non .col-body{background:#f0fdf4;flex:1;padding:3mm;font-size:7.5pt;color:#14532d}
+  .non-juara{font-weight:600;display:flex;gap:2mm;align-items:flex-start;margin-bottom:1px;font-size:7.5pt}
+  .non-detail{color:#166534;margin-left:5mm;font-size:7pt;font-weight:400}
+  .non-small{color:#6b7280;font-size:6.5pt;margin-left:5mm;font-weight:300}
   /* kegiatan */
   .col-keg{border:1.5px solid #1e3a5f}
   .col-keg .col-hdr{background:linear-gradient(135deg,#1e3a5f,#1d4ed8)}
   .col-keg .col-hdr-sub{color:#bfdbfe}
-  .col-keg .col-body{background:#eff6ff;flex:1;padding:3mm;font-size:7pt;color:#1e3a5f}
-  .keg-row{display:flex;gap:2mm;margin-bottom:1.5mm;align-items:flex-start}
-  .bullet{font-size:8pt;font-weight:bold;flex-shrink:0}
-  .empty{color:#aaa;font-style:italic;font-size:6.5pt}
+  .col-keg .col-body{background:#eff6ff;flex:1;padding:3mm;font-size:7.5pt;color:#1e3a5f}
+  .keg-row{display:flex;gap:2mm;margin-bottom:1.5mm;align-items:flex-start;font-weight:400}
+  .bullet{font-size:8.5pt;font-weight:700;flex-shrink:0}
+  .empty{color:#aaa;font-style:italic;font-size:7pt;font-weight:300}
   /* motivasi */
   .motivasi{
     background:linear-gradient(135deg,#f9f6ed,#fdf8ef);
     border:1px solid #e8d5a3;border-radius:7px;padding:3mm 5mm;text-align:center
   }
-  .motivasi-title{font-size:6pt;color:#B8860B;font-weight:bold;letter-spacing:2px;text-transform:uppercase;margin-bottom:1.5mm}
-  .motivasi-text{font-size:7pt;color:#555;font-style:italic;line-height:1.7}
+  .motivasi-title{font-size:6.5pt;font-weight:600;color:#B8860B;letter-spacing:2px;text-transform:uppercase;margin-bottom:1.5mm}
+  .motivasi-text{font-size:7.5pt;font-weight:300;color:#555;font-style:italic;line-height:1.8}
   /* footer */
-  .footer{border-top:1px solid #e5e7eb;padding-top:3mm;display:flex;justify-content:space-between;align-items:center}
-  .ayat{font-size:6pt;color:#aaa;font-style:italic;line-height:1.7;max-width:65%}
-  .ayat-ref{color:#B8860B;display:block;margin-top:1mm}
-  .tgl{font-size:6.5pt;color:#888;text-align:right}
+  .footer{border-top:1px solid #e5e7eb;padding-top:2.5mm;display:flex;justify-content:space-between;align-items:center}
+  .ayat{font-size:6.5pt;font-weight:300;color:#aaa;font-style:italic;line-height:1.7;max-width:65%}
+  .ayat-ref{color:#B8860B;display:block;margin-top:1mm;font-weight:500}
+  .tgl{font-size:7pt;font-weight:500;color:#888;text-align:right}
 </style>
 </head>
 <body>
@@ -332,6 +333,7 @@ ${pages.map(p => {
 <html lang="id">
 <head>
 <meta charset="UTF-8"/>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&display=swap" rel="stylesheet"/>
 <title>Achievement ${kelasNama}</title>
 <style>
   ${css}
