@@ -7,70 +7,49 @@ export async function GET(req: NextRequest) {
   if (!await isAdminFromRequest(req))
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const kelas_filter = req.nextUrl.searchParams.get('kelas') // opsional
-
-  // Ambil semua data dengan join
-  let query = supabaseAdmin()
+  const { data, error } = await supabaseAdmin()
     .from('prestasi')
-    .select(`
-      id,
-      kegiatan_sekolah,
-      kegiatan_pondok,
-      prestasi_sekolah,
-      prestasi_pondok,
-      progres_pribadi,
-      updated_at,
-      santri (
-        no_urut,
-        nama,
-        kelas ( nama )
-      )
-    `)
+    .select(`id, kegiatan_sekolah, kegiatan_pondok, prestasi_tahfidz, prestasi_non_tahfidz, progres_pribadi, updated_at, santri(no_urut, nama, kelas(nama))`)
     .order('updated_at', { ascending: false })
 
-  const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Flatten data
-  let rows = (data || []).map((p: any) => ({
-    'No Urut':           p.santri?.no_urut || '',
-    'Nama Santri':       p.santri?.nama || '',
-    'Kelas':             p.santri?.kelas?.nama || '',
-    'Kegiatan Sekolah':  p.kegiatan_sekolah,
-    'Kegiatan Pondok':   p.kegiatan_pondok,
-    'Prestasi Sekolah':  p.prestasi_sekolah,
-    'Prestasi Pondok':   p.prestasi_pondok,
-    'Progres Pribadi':   p.progres_pribadi,
-    'Terakhir Update':   new Date(p.updated_at).toLocaleDateString('id-ID')
-  }))
+  const JUZ_LEVEL: Record<number,string> = { 1:'Full', 2:'3/4', 3:'1/2', 4:'1/4' }
 
-  if (kelas_filter) {
-    rows = rows.filter(r => r['Kelas'] === kelas_filter)
-  }
-
-  // Buat workbook dengan sheet per kelas
-  const wb = XLSX.utils.book_new()
-
-  // Sheet: Semua Kelas
-  const ws_all = XLSX.utils.json_to_sheet(rows)
-  ws_all['!cols'] = [
-    {wch:8},{wch:25},{wch:12},{wch:30},{wch:30},{wch:30},{wch:30},{wch:35},{wch:16}
-  ]
-  XLSX.utils.book_append_sheet(wb, ws_all, 'Semua Kelas')
-
-  // Sheet per kelas
-  const kelasList = [...new Set(rows.map(r => r['Kelas']))]
-  kelasList.forEach(k => {
-    const kelasRows = rows.filter(r => r['Kelas'] === k)
-    const ws = XLSX.utils.json_to_sheet(kelasRows)
-    ws['!cols'] = [
-      {wch:8},{wch:25},{wch:12},{wch:30},{wch:30},{wch:30},{wch:30},{wch:35},{wch:16}
-    ]
-    XLSX.utils.book_append_sheet(wb, ws, k.replace('Kelas ', 'Kls '))
+  const rows = (data||[]).map((p: any) => {
+    const tahfidz = (p.prestasi_tahfidz||[])
+      .map((j: any) => `Juz ${j.juz} (${JUZ_LEVEL[j.level]||''})`)
+      .join(', ')
+    const nonTahfidz = (p.prestasi_non_tahfidz||[])
+      .map((n: any) => `${n.juara} – ${n.cabang} (${n.penyelenggara}, ${n.bulan_tahun})`)
+      .join('\n')
+    return {
+      'No':                p.santri?.no_urut||'',
+      'Nama':              p.santri?.nama||'',
+      'Kelas':             p.santri?.kelas?.nama||'',
+      'Kegiatan Sekolah':  p.kegiatan_sekolah,
+      'Kegiatan Pondok':   p.kegiatan_pondok,
+      'Prestasi Tahfidz':  tahfidz,
+      'Prestasi Non Tahfidz': nonTahfidz,
+      'Progres Pribadi':   p.progres_pribadi,
+      'Update':            new Date(p.updated_at).toLocaleDateString('id-ID')
+    }
   })
 
-  const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })
+  const wb = XLSX.utils.book_new()
+  const ws = XLSX.utils.json_to_sheet(rows)
+  ws['!cols'] = [{wch:5},{wch:25},{wch:12},{wch:30},{wch:30},{wch:35},{wch:40},{wch:35},{wch:14}]
+  XLSX.utils.book_append_sheet(wb, ws, 'Semua Kelas')
 
+  const kelasList = [...new Set(rows.map(r => r['Kelas']))]
+  kelasList.forEach(k => {
+    const wr = rows.filter(r => r['Kelas'] === k)
+    const ws2 = XLSX.utils.json_to_sheet(wr)
+    ws2['!cols'] = [{wch:5},{wch:25},{wch:12},{wch:30},{wch:30},{wch:35},{wch:40},{wch:35},{wch:14}]
+    XLSX.utils.book_append_sheet(wb, ws2, String(k).replace('Kelas ','Kls '))
+  })
+
+  const buf = XLSX.write(wb, { type:'buffer', bookType:'xlsx' })
   return new NextResponse(buf, {
     headers: {
       'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
