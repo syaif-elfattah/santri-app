@@ -5,6 +5,28 @@ import Link from 'next/link'
 
 type Kelas      = { id: string; nama: string }
 type TahunAjaran= { id: string; nama: string; aktif: boolean }
+type AchConfig  = {
+  nama_institusi: string; judul: string; subjudul: string; label_diberikan: string
+  teks_motivasi_1: string; teks_motivasi_2: string; teks_motivasi_3: string
+  label_motivasi: string; teks_ayat: string; referensi_ayat: string
+  warna_tahfidz: string; warna_non_tahfidz: string; warna_kegiatan: string; warna_progres: string
+  ukuran_judul: number; ukuran_nama: number; ukuran_isi: number; ukuran_logo: number
+  tampil_progres: boolean; tampil_motivasi: boolean; tampil_ayat: boolean
+}
+const DEFAULT_CFG: AchConfig = {
+  nama_institusi:"Pondok Pesantren Ma'ahid Kudus", judul:"ACHIEVEMENT",
+  subjudul:"Catatan Prestasi & Keaktifan Santri", label_diberikan:"Diberikan Kepada",
+  teks_motivasi_1:"Ayah & Bunda, setiap doa yang kalian panjatkan adalah investasi terbaik yang tidak ternilai. Teruslah hadir dan mendukung.",
+  teks_motivasi_2:"Terima kasih, Ayah & Bunda, telah mempercayakan ananda kepada kami. Setiap langkah kecil adalah buah dari doa kalian.",
+  teks_motivasi_3:"Ayah & Bunda yang luar biasa, prestasi bukan hanya angka — tetapi karakter yang tumbuh dan hati yang semakin dekat kepada Allah.",
+  label_motivasi:"✦ Pesan untuk Ayah & Bunda ✦",
+  teks_ayat:"Dan barangsiapa yang bersungguh-sungguh di jalan Kami, maka Kami akan tunjukkan kepada mereka jalan-jalan Kami.",
+  referensi_ayat:"(QS. Al-'Ankabut: 69)",
+  warna_tahfidz:"#b45309", warna_non_tahfidz:"#065f46",
+  warna_kegiatan:"#1e40af", warna_progres:"#7c3aed",
+  ukuran_judul:28, ukuran_nama:21, ukuran_isi:9, ukuran_logo:80,
+  tampil_progres:true, tampil_motivasi:true, tampil_ayat:true
+}
 type JuzEntry   = { juz: number; level: number }
 type NonTahfidz = { juara: string; cabang: string; penyelenggara: string; bulan_tahun: string }
 type Prestasi   = {
@@ -20,11 +42,7 @@ type SantriItem = {
 const JUZ_VAL: Record<number,number> = { 1:1, 2:0.75, 3:0.5, 4:0.25 }
 const JUZ_LBL: Record<number,string> = { 1:'', 2:'(¾)', 3:'(½)', 4:'(¼)' }
 
-const MOTIVASI = [
-  'Ayah & Bunda, setiap doa yang kalian panjatkan adalah investasi terbaik yang tidak ternilai. Teruslah hadir dan mendukung — kehadiran kalian adalah energi terbesar bagi perjalanan ananda.',
-  'Terima kasih, Ayah & Bunda, telah mempercayakan ananda kepada kami. Setiap langkah kecil yang ananda tempuh adalah buah dari kasih sayang dan doa kalian yang tiada putus.',
-  'Ayah & Bunda yang luar biasa, prestasi bukan hanya angka dan piala — tetapi karakter yang tumbuh, akhlak yang terbentuk, dan hati yang semakin dekat kepada Allah. Ananda sedang dalam perjalanan indah itu.',
-]
+// Motivasi sekarang dari database (achievement_config)
 
 function totalJuz(list: JuzEntry[]): number {
   return list.reduce((s,j) => s + (JUZ_VAL[j.level] || 0), 0)
@@ -45,7 +63,7 @@ function todayKudus(): string {
 }
 
 // ─── Build HTML satu halaman achievement ─────────────────────
-function buildCardHTML(item: SantriItem, motivasi: string, tanggal: string, tahunAjaran: string): string {
+function buildCardHTML(item: SantriItem, motivasi: string, tanggal: string, tahunAjaran: string, cfg: AchConfig): string {
   const { santri, prestasi } = item
   const tahfidz    = prestasi?.prestasi_tahfidz    || []
   const nonTahfidz = prestasi?.prestasi_non_tahfidz || []
@@ -107,9 +125,9 @@ function buildCardHTML(item: SantriItem, motivasi: string, tanggal: string, tahu
   .wm{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);font-size:65px;opacity:0.03;color:#1a5c3a;font-weight:700;white-space:nowrap;letter-spacing:8px;pointer-events:none}
   .content{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;gap:2.5mm}
   /* Header */
-  .logo{width:80px;height:80px;object-fit:contain;display:block;margin:0 auto 2.5mm}
+  .logo{width:${cfg.ukuran_logo}px;height:${cfg.ukuran_logo}px;object-fit:contain;display:block;margin:0 auto 2.5mm}
   .inst{font-size:9pt;font-weight:600;letter-spacing:3px;color:#374151;text-transform:uppercase;text-align:center;margin-bottom:1mm}
-  .title{font-size:28pt;font-weight:700;color:#1a3a2a;letter-spacing:5px;text-align:center;margin-bottom:1mm}
+  .title{font-size:${cfg.ukuran_judul}pt;font-weight:700;color:#1a3a2a;letter-spacing:5px;text-align:center;margin-bottom:1mm}
   .divider{display:flex;align-items:center;justify-content:center;gap:6px;margin:0.5mm 0}
   .dl{height:1px;width:40px;background:linear-gradient(to right,transparent,#B8860B)}
   .dr{height:1px;width:40px;background:linear-gradient(to left,transparent,#B8860B)}
@@ -117,7 +135,7 @@ function buildCardHTML(item: SantriItem, motivasi: string, tanggal: string, tahu
   /* Nama */
   .nama-box{background:linear-gradient(135deg,#f9f6ed,#fdf8ef);border:1.5px solid #D4AF37;border-radius:8px;padding:3mm 8mm;text-align:center;box-shadow:0 2px 8px rgba(184,134,11,.12)}
   .diberikan{font-size:7.5pt;font-weight:600;color:#9ca3af;letter-spacing:3px;text-transform:uppercase;margin-bottom:1.5mm}
-  .nama{font-size:21pt;font-weight:700;color:#1a5c3a;margin-bottom:1mm;line-height:1.2}
+  .nama{font-size:${cfg.ukuran_nama}pt;font-weight:700;color:#1a5c3a;margin-bottom:1mm;line-height:1.2}
   .kelas-txt{font-size:10pt;font-weight:500;color:#4b5563}
   /* Grid 3 kolom */
   .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2.5mm}
@@ -127,9 +145,9 @@ function buildCardHTML(item: SantriItem, motivasi: string, tanggal: string, tahu
   .col-hdr-s{font-size:7.5pt;font-weight:500;letter-spacing:0.5px;text-transform:uppercase;margin-top:1px}
   /* Tahfidz */
   .col-tahfidz{border:1.5px solid #b45309}
-  .col-tahfidz .col-hdr{background:linear-gradient(135deg,#78350f,#b45309)}
+  .col-tahfidz .col-hdr{background:linear-gradient(135deg,#78350f,${cfg.warna_tahfidz})}
   .col-tahfidz .col-hdr-s{color:#fef3c7}
-  .col-tahfidz .col-body{background:#fffbeb;flex:1;padding:2.5mm;font-size:8.5pt;color:#451a03}
+  .col-tahfidz .col-body{background:#fffbeb;flex:1;padding:2.5mm;font-size:${cfg.ukuran_isi}pt;color:#451a03}
   .total-box{background:linear-gradient(135deg,#92400e,#D4AF37);border-radius:5px;padding:2mm;text-align:center;margin-bottom:2mm}
   .total-label{font-size:7pt;font-weight:600;color:#fef9c3;letter-spacing:1px;text-transform:uppercase}
   .total-num{font-size:19pt;font-weight:700;color:#fff;line-height:1.1}
@@ -137,22 +155,22 @@ function buildCardHTML(item: SantriItem, motivasi: string, tanggal: string, tahu
   .juz-row{display:flex;align-items:center;gap:2mm;margin-bottom:1.5mm;font-size:8.5pt;color:#451a03;font-weight:500}
   /* Non tahfidz */
   .col-non{border:1.5px solid #065f46}
-  .col-non .col-hdr{background:linear-gradient(135deg,#064e3b,#065f46)}
+  .col-non .col-hdr{background:linear-gradient(135deg,#064e3b,${cfg.warna_non_tahfidz})}
   .col-non .col-hdr-s{color:#a7f3d0}
-  .col-non .col-body{background:#ecfdf5;flex:1;padding:2.5mm;font-size:8.5pt;color:#064e3b}
+  .col-non .col-body{background:#ecfdf5;flex:1;padding:2.5mm;font-size:${cfg.ukuran_isi}pt;color:#064e3b}
   .non-juara{font-weight:700;display:flex;gap:2mm;align-items:flex-start;margin-bottom:1px;font-size:8.5pt;color:#064e3b}
   .non-detail{color:#065f46;margin-left:5mm;font-size:8pt;font-weight:500}
   .non-small{color:#374151;font-size:7.5pt;margin-left:5mm;font-weight:400}
   /* Kegiatan */
   .col-keg{border:1.5px solid #1e40af}
-  .col-keg .col-hdr{background:linear-gradient(135deg,#1e3a8a,#1e40af)}
+  .col-keg .col-hdr{background:linear-gradient(135deg,#1e3a8a,${cfg.warna_kegiatan})}
   .col-keg .col-hdr-s{color:#bfdbfe}
-  .col-keg .col-body{background:#eff6ff;flex:1;padding:2.5mm;font-size:8.5pt;color:#1e3a8a}
+  .col-keg .col-body{background:#eff6ff;flex:1;padding:2.5mm;font-size:${cfg.ukuran_isi}pt;color:#1e3a8a}
   .keg-row{display:flex;gap:2mm;margin-bottom:1.5mm;align-items:flex-start;font-weight:500;color:#1e3a8a}
   .empty{color:#9ca3af;font-style:italic;font-size:8pt;font-weight:400}
   /* Progres Pribadi */
   .progres-box{background:linear-gradient(135deg,#f5f3ff,#ede9fe);border:1.5px solid #7c3aed;border-radius:7px;overflow:hidden}
-  .progres-hdr{background:linear-gradient(135deg,#4c1d95,#7c3aed);padding:2.5mm 3mm;display:flex;align-items:center;gap:2mm}
+  .progres-hdr{background:linear-gradient(135deg,#4c1d95,${cfg.warna_progres});padding:2.5mm 3mm;display:flex;align-items:center;gap:2mm}
   .progres-hdr-t{font-size:8.5pt;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase}
   .progres-body{padding:2.5mm 3mm;display:flex;flex-wrap:wrap;gap:1.5mm}
   .prog-row{display:flex;gap:2mm;align-items:flex-start;font-size:8.5pt;color:#4c1d95;font-weight:500;width:calc(50% - 0.75mm)}
@@ -178,14 +196,14 @@ function buildCardHTML(item: SantriItem, motivasi: string, tanggal: string, tahu
     <!-- Header -->
     <div style="text-align:center">
       <img class="logo" src="/logo-maahid-sm.png" alt="Logo"/>
-      <div class="inst">Pondok Pesantren Ma'ahid Kudus</div>
-      <div class="title">ACHIEVEMENT</div>
+      <div class="inst">${cfg.nama_institusi}</div>
+      <div class="title">${cfg.judul}</div>
       <div class="divider"><div class="dl"></div><span style="color:#B8860B;font-size:10pt">✦</span><div class="dr"></div></div>
-      <div class="subtitle">Catatan Prestasi &amp; Keaktifan Santri &bull; Tahun Ajaran ${tahunAjaran}</div>
+      <div class="subtitle">${cfg.subjudul} &bull; Tahun Ajaran ${tahunAjaran}</div>
     </div>
     <!-- Nama -->
     <div class="nama-box">
-      <div class="diberikan">Diberikan Kepada</div>
+      <div class="diberikan">${cfg.label_diberikan}</div>
       <div class="nama">${santri.nama}</div>
       <div class="kelas-txt">${santri.kelas?.nama || ''}</div>
     </div>
@@ -221,14 +239,14 @@ function buildCardHTML(item: SantriItem, motivasi: string, tanggal: string, tahu
     </div>
     <!-- Motivasi -->
     <div class="motivasi">
-      <div class="motivasi-title">✦ Pesan untuk Ayah &amp; Bunda ✦</div>
+      <div class="motivasi-title">${cfg.label_motivasi}</div>
       <div class="motivasi-text">"${motivasi}"</div>
     </div>
     <!-- Footer -->
     <div class="footer">
       <div class="ayat">
-        "Dan barangsiapa yang bersungguh-sungguh di jalan Kami, maka Kami akan tunjukkan kepada mereka jalan-jalan Kami."
-        <span class="ayat-ref">(QS. Al-'Ankabut: 69)</span>
+        "${cfg.teks_ayat}"
+        <span class="ayat-ref">${cfg.referensi_ayat}</span>
       </div>
       <div class="tgl">${tanggal}</div>
     </div>
@@ -239,10 +257,10 @@ function buildCardHTML(item: SantriItem, motivasi: string, tanggal: string, tahu
 }
 
 // ─── Preview via iframe ───────────────────────────────────────
-function PreviewCard({ item, motivasi, tanggal, tahunAjaran }: {
-  item: SantriItem; motivasi: string; tanggal: string; tahunAjaran: string
+function PreviewCard({ item, motivasi, tanggal, tahunAjaran, cfg }: {
+  item: SantriItem; motivasi: string; tanggal: string; tahunAjaran: string; cfg: AchConfig
 }) {
-  const html = buildCardHTML(item, motivasi, tanggal, tahunAjaran)
+  const html = buildCardHTML(item, motivasi, tanggal, tahunAjaran, cfg)
   if (!html) return (
     <div style={{width:'210mm',minHeight:'60mm',display:'flex',alignItems:'center',justifyContent:'center',
       border:'1px dashed #d1d5db',borderRadius:8,color:'#9ca3af',fontSize:13,fontStyle:'italic'}}>
@@ -256,9 +274,9 @@ function PreviewCard({ item, motivasi, tanggal, tahunAjaran }: {
 }
 
 // ─── Print semua ke 1 window bersih ──────────────────────────
-function doCetak(data: SantriItem[], tanggal: string, kelasNama: string, tahunAjaran: string) {
+function doCetak(data: SantriItem[], tanggal: string, kelasNama: string, tahunAjaran: string, cfg: AchConfig) {
   const pages = data
-    .map((item, i) => buildCardHTML(item, MOTIVASI[i % MOTIVASI.length], tanggal, tahunAjaran))
+    .map((item, i) => buildCardHTML(item, [cfg.teks_motivasi_1, cfg.teks_motivasi_2, cfg.teks_motivasi_3][i % 3], tanggal, tahunAjaran, cfg))
     .filter(Boolean)
 
   if (!pages.length) { alert('Tidak ada data untuk dicetak'); return }
@@ -310,10 +328,12 @@ export default function AchievementPage() {
   const [activeTaId,    setActiveTaId]    = useState('')
   const [data,          setData]          = useState<SantriItem[]>([])
   const [loading,       setLoading]       = useState(false)
+  const [cfg,           setCfg]           = useState<AchConfig>(DEFAULT_CFG)
   const tanggal = todayKudus()
 
-  // Load kelas + TA
+  // Load kelas + TA + config
   useEffect(() => {
+    fetch('/api/achievement-config').then(r=>r.json()).then(d => setCfg({...DEFAULT_CFG,...d}))
     fetch('/api/kelas').then(r=>r.json()).then((k: Kelas[]) => {
       setKelasList(k)
       if (!activeKelasId && k.length) setActiveKelasId(k[0].id)
@@ -346,8 +366,8 @@ export default function AchievementPage() {
   })
 
   const handleCetak = useCallback(() => {
-    doCetak(data, tanggal, kelasNama, tahunAjaran)
-  }, [data, tanggal, kelasNama, tahunAjaran])
+    doCetak(data, tanggal, kelasNama, tahunAjaran, cfg)
+  }, [data, tanggal, kelasNama, tahunAjaran, cfg])
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -425,8 +445,8 @@ export default function AchievementPage() {
                 </span>
               </div>
               <div className="shadow-xl rounded-sm overflow-hidden" style={{width:'210mm'}}>
-                <PreviewCard item={item} motivasi={MOTIVASI[i % MOTIVASI.length]}
-                  tanggal={tanggal} tahunAjaran={tahunAjaran}/>
+                <PreviewCard item={item} motivasi={[cfg.teks_motivasi_1, cfg.teks_motivasi_2, cfg.teks_motivasi_3][i % 3]}
+                  tanggal={tanggal} tahunAjaran={tahunAjaran} cfg={cfg}/>
               </div>
             </div>
           )
