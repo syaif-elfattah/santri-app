@@ -96,75 +96,75 @@ function buildCardHTML(item: SantriItem, motivasi: string, tanggal: string, tahu
   *{box-sizing:border-box;margin:0;padding:0}
   @page{size:A4 portrait;margin:0}
   body{width:210mm;min-height:297mm;font-family:'Poppins',sans-serif;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .page{width:210mm;min-height:297mm;position:relative;display:flex;flex-direction:column;padding:16mm 15mm 16mm;background:#fff;overflow:hidden}
-  .border-outer{position:absolute;inset:8mm;border:2.5px solid #B8860B;border-radius:4px;pointer-events:none}
-  .border-inner{position:absolute;inset:13mm;border:1px solid #D4AF37;border-radius:2px;pointer-events:none}
+  .page{width:210mm;min-height:297mm;position:relative;display:flex;flex-direction:column;padding:14mm 13mm 14mm;background:#fff;overflow:hidden}
+  .border-outer{position:absolute;inset:7mm;border:2.5px solid #B8860B;border-radius:4px;pointer-events:none}
+  .border-inner{position:absolute;inset:11mm;border:1px solid #D4AF37;border-radius:2px;pointer-events:none}
   .c{position:absolute;width:24px;height:24px;border-color:#B8860B;border-style:solid}
-  .c-tl{top:4mm;left:4mm;border-width:4px 0 0 4px}
-  .c-tr{top:4mm;right:4mm;border-width:4px 4px 0 0}
-  .c-bl{bottom:4mm;left:4mm;border-width:0 0 4px 4px}
-  .c-br{bottom:4mm;right:4mm;border-width:0 4px 4px 0}
+  .c-tl{top:3mm;left:3mm;border-width:4px 0 0 4px}
+  .c-tr{top:3mm;right:3mm;border-width:4px 4px 0 0}
+  .c-bl{bottom:3mm;left:3mm;border-width:0 0 4px 4px}
+  .c-br{bottom:3mm;right:3mm;border-width:0 4px 4px 0}
   .wm{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);font-size:65px;opacity:0.03;color:#1a5c3a;font-weight:700;white-space:nowrap;letter-spacing:8px;pointer-events:none}
-  .content{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;gap:3mm}
+  .content{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;gap:2.5mm}
   /* Header */
-  .logo{width:64px;height:64px;object-fit:contain;display:block;margin:0 auto 2mm}
-  .inst{font-size:7.5pt;font-weight:500;letter-spacing:3px;color:#374151;text-transform:uppercase;text-align:center;margin-bottom:1mm}
-  .title{font-size:25pt;font-weight:700;color:#1a3a2a;letter-spacing:5px;text-align:center;margin-bottom:1mm}
+  .logo{width:80px;height:80px;object-fit:contain;display:block;margin:0 auto 2.5mm}
+  .inst{font-size:9pt;font-weight:600;letter-spacing:3px;color:#374151;text-transform:uppercase;text-align:center;margin-bottom:1mm}
+  .title{font-size:28pt;font-weight:700;color:#1a3a2a;letter-spacing:5px;text-align:center;margin-bottom:1mm}
   .divider{display:flex;align-items:center;justify-content:center;gap:6px;margin:0.5mm 0}
-  .dl{height:1px;width:36px;background:linear-gradient(to right,transparent,#B8860B)}
-  .dr{height:1px;width:36px;background:linear-gradient(to left,transparent,#B8860B)}
-  .subtitle{font-size:7pt;font-weight:400;color:#6b7280;font-style:italic;text-align:center}
+  .dl{height:1px;width:40px;background:linear-gradient(to right,transparent,#B8860B)}
+  .dr{height:1px;width:40px;background:linear-gradient(to left,transparent,#B8860B)}
+  .subtitle{font-size:8.5pt;font-weight:400;color:#6b7280;font-style:italic;text-align:center}
   /* Nama */
-  .nama-box{background:linear-gradient(135deg,#f9f6ed,#fdf8ef);border:1.5px solid #D4AF37;border-radius:8px;padding:3.5mm 8mm;text-align:center;box-shadow:0 2px 8px rgba(184,134,11,.12)}
-  .diberikan{font-size:6.5pt;font-weight:600;color:#9ca3af;letter-spacing:3px;text-transform:uppercase;margin-bottom:1.5mm}
-  .nama{font-size:19pt;font-weight:700;color:#1a5c3a;margin-bottom:1mm;line-height:1.2}
-  .kelas-txt{font-size:8.5pt;font-weight:500;color:#4b5563}
+  .nama-box{background:linear-gradient(135deg,#f9f6ed,#fdf8ef);border:1.5px solid #D4AF37;border-radius:8px;padding:3mm 8mm;text-align:center;box-shadow:0 2px 8px rgba(184,134,11,.12)}
+  .diberikan{font-size:7.5pt;font-weight:600;color:#9ca3af;letter-spacing:3px;text-transform:uppercase;margin-bottom:1.5mm}
+  .nama{font-size:21pt;font-weight:700;color:#1a5c3a;margin-bottom:1mm;line-height:1.2}
+  .kelas-txt{font-size:10pt;font-weight:500;color:#4b5563}
   /* Grid 3 kolom */
-  .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:3mm}
+  .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2.5mm}
   .col{border-radius:7px;overflow:hidden;display:flex;flex-direction:column}
   .col-hdr{padding:2.5mm;text-align:center}
-  .col-hdr-t{font-size:7.5pt;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase}
-  .col-hdr-s{font-size:6.5pt;font-weight:500;letter-spacing:0.5px;text-transform:uppercase;margin-top:1px}
+  .col-hdr-t{font-size:8.5pt;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase}
+  .col-hdr-s{font-size:7.5pt;font-weight:500;letter-spacing:0.5px;text-transform:uppercase;margin-top:1px}
   /* Tahfidz */
   .col-tahfidz{border:1.5px solid #b45309}
   .col-tahfidz .col-hdr{background:linear-gradient(135deg,#78350f,#b45309)}
   .col-tahfidz .col-hdr-s{color:#fef3c7}
-  .col-tahfidz .col-body{background:#fffbeb;flex:1;padding:2.5mm;font-size:7.5pt;color:#451a03}
+  .col-tahfidz .col-body{background:#fffbeb;flex:1;padding:2.5mm;font-size:8.5pt;color:#451a03}
   .total-box{background:linear-gradient(135deg,#92400e,#D4AF37);border-radius:5px;padding:2mm;text-align:center;margin-bottom:2mm}
-  .total-label{font-size:6pt;font-weight:600;color:#fef9c3;letter-spacing:1px;text-transform:uppercase}
-  .total-num{font-size:16pt;font-weight:700;color:#fff;line-height:1.1}
-  .total-unit{font-size:7pt;font-weight:600;color:#fef3c7}
-  .juz-row{display:flex;align-items:center;gap:2mm;margin-bottom:1.5mm;font-size:7.5pt;color:#451a03;font-weight:500}
+  .total-label{font-size:7pt;font-weight:600;color:#fef9c3;letter-spacing:1px;text-transform:uppercase}
+  .total-num{font-size:19pt;font-weight:700;color:#fff;line-height:1.1}
+  .total-unit{font-size:8pt;font-weight:600;color:#fef3c7}
+  .juz-row{display:flex;align-items:center;gap:2mm;margin-bottom:1.5mm;font-size:8.5pt;color:#451a03;font-weight:500}
   /* Non tahfidz */
   .col-non{border:1.5px solid #065f46}
   .col-non .col-hdr{background:linear-gradient(135deg,#064e3b,#065f46)}
   .col-non .col-hdr-s{color:#a7f3d0}
-  .col-non .col-body{background:#ecfdf5;flex:1;padding:2.5mm;font-size:7.5pt;color:#064e3b}
-  .non-juara{font-weight:700;display:flex;gap:2mm;align-items:flex-start;margin-bottom:1px;font-size:7.5pt;color:#064e3b}
-  .non-detail{color:#065f46;margin-left:5mm;font-size:7pt;font-weight:500}
-  .non-small{color:#374151;font-size:6.5pt;margin-left:5mm;font-weight:400}
+  .col-non .col-body{background:#ecfdf5;flex:1;padding:2.5mm;font-size:8.5pt;color:#064e3b}
+  .non-juara{font-weight:700;display:flex;gap:2mm;align-items:flex-start;margin-bottom:1px;font-size:8.5pt;color:#064e3b}
+  .non-detail{color:#065f46;margin-left:5mm;font-size:8pt;font-weight:500}
+  .non-small{color:#374151;font-size:7.5pt;margin-left:5mm;font-weight:400}
   /* Kegiatan */
   .col-keg{border:1.5px solid #1e40af}
   .col-keg .col-hdr{background:linear-gradient(135deg,#1e3a8a,#1e40af)}
   .col-keg .col-hdr-s{color:#bfdbfe}
-  .col-keg .col-body{background:#eff6ff;flex:1;padding:2.5mm;font-size:7.5pt;color:#1e3a8a}
+  .col-keg .col-body{background:#eff6ff;flex:1;padding:2.5mm;font-size:8.5pt;color:#1e3a8a}
   .keg-row{display:flex;gap:2mm;margin-bottom:1.5mm;align-items:flex-start;font-weight:500;color:#1e3a8a}
-  .empty{color:#9ca3af;font-style:italic;font-size:7pt;font-weight:400}
+  .empty{color:#9ca3af;font-style:italic;font-size:8pt;font-weight:400}
   /* Progres Pribadi */
   .progres-box{background:linear-gradient(135deg,#f5f3ff,#ede9fe);border:1.5px solid #7c3aed;border-radius:7px;overflow:hidden}
   .progres-hdr{background:linear-gradient(135deg,#4c1d95,#7c3aed);padding:2.5mm 3mm;display:flex;align-items:center;gap:2mm}
-  .progres-hdr-t{font-size:7.5pt;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase}
+  .progres-hdr-t{font-size:8.5pt;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase}
   .progres-body{padding:2.5mm 3mm;display:flex;flex-wrap:wrap;gap:1.5mm}
-  .prog-row{display:flex;gap:2mm;align-items:flex-start;font-size:7.5pt;color:#4c1d95;font-weight:500;width:calc(50% - 0.75mm)}
+  .prog-row{display:flex;gap:2mm;align-items:flex-start;font-size:8.5pt;color:#4c1d95;font-weight:500;width:calc(50% - 0.75mm)}
   /* Motivasi */
-  .motivasi{background:linear-gradient(135deg,#f9f6ed,#fdf8ef);border:1px solid #d97706;border-radius:7px;padding:2.5mm 5mm;text-align:center}
-  .motivasi-title{font-size:6.5pt;font-weight:700;color:#92400e;letter-spacing:2px;text-transform:uppercase;margin-bottom:1.5mm}
-  .motivasi-text{font-size:7.5pt;font-weight:400;color:#374151;font-style:italic;line-height:1.8}
+  .motivasi{background:linear-gradient(135deg,#f9f6ed,#fdf8ef);border:1px solid #d97706;border-radius:7px;padding:2mm 5mm;text-align:center}
+  .motivasi-title{font-size:7.5pt;font-weight:700;color:#92400e;letter-spacing:2px;text-transform:uppercase;margin-bottom:1mm}
+  .motivasi-text{font-size:8.5pt;font-weight:400;color:#374151;font-style:italic;line-height:1.7}
   /* Footer */
-  .footer{border-top:1px solid #d1d5db;padding-top:2.5mm;margin-bottom:1mm;display:flex;justify-content:space-between;align-items:center}
-  .ayat{font-size:6.5pt;font-weight:400;color:#6b7280;font-style:italic;line-height:1.7;max-width:65%}
+  .footer{border-top:1px solid #d1d5db;padding-top:2mm;margin-bottom:1mm;display:flex;justify-content:space-between;align-items:center}
+  .ayat{font-size:7.5pt;font-weight:400;color:#6b7280;font-style:italic;line-height:1.7;max-width:65%}
   .ayat-ref{color:#b45309;display:block;margin-top:1mm;font-weight:600}
-  .tgl{font-size:7pt;font-weight:600;color:#374151;text-align:right}
+  .tgl{font-size:8pt;font-weight:600;color:#374151;text-align:right}
 </style>
 </head>
 <body>
