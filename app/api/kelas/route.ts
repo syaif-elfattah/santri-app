@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase, supabaseAdmin } from '@/lib/supabase'
 import { isAdminFromRequest } from '@/lib/auth'
 
-// GET /api/kelas - daftar semua kelas (publik)
+// GET /api/kelas - cache 60 detik (kelas jarang berubah)
 export async function GET() {
   const { data, error } = await supabase
     .from('kelas')
@@ -10,10 +10,14 @@ export async function GET() {
     .order('urutan')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+
+  return NextResponse.json(data, {
+    headers: {
+      'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
+    },
+  })
 }
 
-// POST /api/kelas - tambah kelas baru (admin)
 export async function POST(req: NextRequest) {
   if (!await isAdminFromRequest(req))
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -32,7 +36,6 @@ export async function POST(req: NextRequest) {
   return NextResponse.json(data, { status: 201 })
 }
 
-// DELETE /api/kelas?id=xxx - hapus kelas (admin)
 export async function DELETE(req: NextRequest) {
   if (!await isAdminFromRequest(req))
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
