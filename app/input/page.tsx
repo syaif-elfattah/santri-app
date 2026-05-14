@@ -353,8 +353,15 @@ function InputTab({ kelas }: { kelas: Kelas }) {
   const [saving, setSaving]           = useState(false)
   const [saved, setSaved]             = useState(false)
   const [error, setError]             = useState('')
+  const [tahunAjaranId, setTahunAjaranId] = useState<string|null>(null)
 
-  useEffect(()=>{ fetch(`/api/santri?kelas_id=${kelas.id}`).then(r=>r.json()).then(setSantriList) },[kelas.id])
+  useEffect(()=>{
+    fetch(`/api/santri?kelas_id=${kelas.id}`).then(r=>r.json()).then(setSantriList)
+    // Ambil tahun ajaran aktif
+    fetch('/api/tahun-ajaran?aktif=1').then(r=>r.json()).then((d:any[])=>{
+      if(d && d.length > 0) setTahunAjaranId(d[0].id)
+    })
+  },[kelas.id])
 
   const selectSantri=(s:Santri)=>{ setSelected(s); setForm(emptyForm()); setTagsSek([]); setTagsPon([]); setTagsProgres([]); setSaved(false); setError('') }
   const toggleSek=(t:string)=>setTagsSek(p=>p.includes(t)?p.filter(x=>x!==t):[...p,t])
@@ -370,6 +377,7 @@ function InputTab({ kelas }: { kelas: Kelas }) {
         method:'POST', headers:{'Content-Type':'application/json'},
         body:JSON.stringify({
           santri_id:            selectedSantri.id,
+          tahun_ajaran_id:      tahunAjaranId,
           kegiatan_sekolah:     buildField(tagsSek, form.kegiatan_sekolah),
           kegiatan_pondok:      buildField(tagsPon, form.kegiatan_pondok),
           prestasi_tahfidz:     form.prestasi_tahfidz,
