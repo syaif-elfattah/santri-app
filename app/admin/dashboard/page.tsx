@@ -1,7 +1,5 @@
 'use client'
-import { useState } from 'react'
-import useSWR from 'swr'
-import { fetcher } from '@/lib/fetcher'
+import { useState, useEffect } from 'react'
 
 type Rekap = {
   id: string; nama: string; no_urut: number
@@ -12,21 +10,29 @@ type TahunAjaran = { id: string; nama: string; aktif: boolean }
 
 export default function DashboardPage() {
   const [filterKelas, setFilterKelas] = useState('')
+  const [rekap,   setRekap]   = useState<Rekap[]>([])
+  const [kelas,   setKelas]   = useState<Kelas[]>([])
+  const [taList,  setTaList]  = useState<TahunAjaran[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const { data: rekap,  isLoading: loadRekap } = useSWR<Rekap[]>(
-    '/api/prestasi', fetcher, { refreshInterval: 30_000 }
-  )
-  const { data: kelas } = useSWR<Kelas[]>('/api/kelas', fetcher)
-  const { data: taList } = useSWR<TahunAjaran[]>('/api/tahun-ajaran', fetcher)
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/prestasi').then(r => r.json()),
+      fetch('/api/kelas').then(r => r.json()),
+      fetch('/api/tahun-ajaran').then(r => r.json()),
+    ]).then(([r, k, t]) => {
+      setRekap(r)
+      setKelas(k)
+      setTaList(t)
+      setLoading(false)
+    })
+  }, [])
 
-  const data      = rekap || []
-  const kelasList = kelas || []
-  const filtered  = filterKelas ? data.filter(d => d.kelas === filterKelas) : data
-
-  const totalSantri = new Set(data.map(d => d.id)).size
-  const totalEntri  = data.reduce((a, b) => a + (b.jumlah_entri || 0), 0)
-  const denganData  = data.filter(d => d.jumlah_entri > 0).length
-  const taAktif     = (taList || []).find(t => t.aktif)
+  const filtered    = filterKelas ? rekap.filter(d => d.kelas === filterKelas) : rekap
+  const totalSantri = new Set(rekap.map(d => d.id)).size
+  const totalEntri  = rekap.reduce((a, b) => a + (b.jumlah_entri || 0), 0)
+  const denganData  = rekap.filter(d => d.jumlah_entri > 0).length
+  const taAktif     = taList.find(t => t.aktif)
 
   return (
     <div>
@@ -55,7 +61,7 @@ export default function DashboardPage() {
           <div key={s.label} className="card">
             <div className="text-2xl mb-1">{s.icon}</div>
             <div className="text-2xl font-semibold text-gray-900">
-              {loadRekap
+              {loading
                 ? <span className="animate-pulse bg-gray-200 rounded h-7 w-12 inline-block"/>
                 : s.value}
             </div>
@@ -70,7 +76,7 @@ export default function DashboardPage() {
           className={`tag-pill ${!filterKelas ? 'active' : ''}`}>
           Semua kelas
         </button>
-        {kelasList.map(k => (
+        {kelas.map(k => (
           <button key={k.id} onClick={() => setFilterKelas(k.nama)}
             className={`tag-pill ${filterKelas === k.nama ? 'active' : ''}`}>
             {k.nama}
@@ -92,12 +98,12 @@ export default function DashboardPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {loadRekap && (
+              {loading && (
                 <tr>
                   <td colSpan={5} className="py-12 text-center text-gray-400">Memuat...</td>
                 </tr>
               )}
-              {!loadRekap && filtered.length === 0 && (
+              {!loading && filtered.length === 0 && (
                 <tr>
                   <td colSpan={5} className="py-12 text-center text-gray-400">Belum ada data</td>
                 </tr>
