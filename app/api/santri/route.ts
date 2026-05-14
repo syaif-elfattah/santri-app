@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase, supabaseAdmin } from '@/lib/supabase'
 import { isAdminFromRequest } from '@/lib/auth'
 
-// GET /api/santri?kelas_id=xxx
+// GET /api/santri?kelas_id=xxx — cache 30 detik
 export async function GET(req: NextRequest) {
   const kelas_id = req.nextUrl.searchParams.get('kelas_id')
 
@@ -16,12 +16,14 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+
+  return NextResponse.json(data, {
+    headers: {
+      'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120',
+    },
+  })
 }
 
-// POST /api/santri - tambah 1 santri atau bulk (admin)
-// Body: { kelas_id, nama, no_urut, keterangan }
-//    atau { kelas_id, bulk: [{ nama, no_urut }] }
 export async function POST(req: NextRequest) {
   if (!await isAdminFromRequest(req))
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -29,7 +31,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json()
   const db = supabaseAdmin()
 
-  // Bulk insert (paste dari Excel)
+  // Bulk insert
   if (body.bulk && Array.isArray(body.bulk)) {
     const rows = body.bulk
       .filter((r: any) => r.nama?.trim())
@@ -43,7 +45,6 @@ export async function POST(req: NextRequest) {
     if (!rows.length)
       return NextResponse.json({ error: 'Tidak ada data valid' }, { status: 400 })
 
-    // Upsert: kalau no_urut sudah ada di kelas itu, update nama-nya
     const { data, error } = await db
       .from('santri')
       .upsert(rows, { onConflict: 'kelas_id,no_urut' })
@@ -62,14 +63,12 @@ export async function POST(req: NextRequest) {
     .from('santri')
     .upsert({ kelas_id, nama: nama.trim(), no_urut, keterangan: keterangan || '' },
              { onConflict: 'kelas_id,no_urut' })
-    .select()
-    .single()
+    .select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data, { status: 201 })
 }
 
-// PATCH /api/santri?id=xxx - edit santri (admin)
 export async function PATCH(req: NextRequest) {
   if (!await isAdminFromRequest(req))
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -79,9 +78,7 @@ export async function PATCH(req: NextRequest) {
 
   const updates = await req.json()
   const allowed = ['nama', 'no_urut', 'kelas_id', 'keterangan', 'aktif']
-  const clean = Object.fromEntries(
-    Object.entries(updates).filter(([k]) => allowed.includes(k))
-  )
+  const clean = Object.fromEntries(Object.entries(updates).filter(([k]) => allowed.includes(k)))
 
   const { data, error } = await supabaseAdmin()
     .from('santri').update(clean).eq('id', id).select().single()
@@ -90,7 +87,6 @@ export async function PATCH(req: NextRequest) {
   return NextResponse.json(data)
 }
 
-// DELETE /api/santri?id=xxx (admin)
 export async function DELETE(req: NextRequest) {
   if (!await isAdminFromRequest(req))
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -98,7 +94,6 @@ export async function DELETE(req: NextRequest) {
   const id = req.nextUrl.searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'ID wajib diisi' }, { status: 400 })
 
-  // Soft delete
   const { error } = await supabaseAdmin()
     .from('santri').update({ aktif: false }).eq('id', id)
 
