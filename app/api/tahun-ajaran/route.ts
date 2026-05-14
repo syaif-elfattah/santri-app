@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase, supabaseAdmin } from '@/lib/supabase'
 import { isAdminFromRequest } from '@/lib/auth'
 
-// GET /api/tahun-ajaran — daftar semua (publik)
-// GET /api/tahun-ajaran?aktif=1 — hanya yang aktif
+// GET /api/tahun-ajaran — cache 30 detik
 export async function GET(req: NextRequest) {
   const aktifOnly = req.nextUrl.searchParams.get('aktif')
 
@@ -16,10 +15,14 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+
+  return NextResponse.json(data, {
+    headers: {
+      'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120',
+    },
+  })
 }
 
-// POST — tambah tahun ajaran baru (admin)
 export async function POST(req: NextRequest) {
   if (!await isAdminFromRequest(req))
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -37,7 +40,6 @@ export async function POST(req: NextRequest) {
   return NextResponse.json(data, { status: 201 })
 }
 
-// PATCH /api/tahun-ajaran?id=xxx — edit atau set aktif (admin)
 export async function PATCH(req: NextRequest) {
   if (!await isAdminFromRequest(req))
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -47,9 +49,7 @@ export async function PATCH(req: NextRequest) {
 
   const body = await req.json()
   const allowed = ['nama', 'tanggal_mulai', 'tanggal_selesai', 'aktif']
-  const clean = Object.fromEntries(
-    Object.entries(body).filter(([k]) => allowed.includes(k))
-  )
+  const clean = Object.fromEntries(Object.entries(body).filter(([k]) => allowed.includes(k)))
 
   const { data, error } = await supabaseAdmin()
     .from('tahun_ajaran').update(clean).eq('id', id).select().single()
@@ -58,7 +58,6 @@ export async function PATCH(req: NextRequest) {
   return NextResponse.json(data)
 }
 
-// DELETE — hapus tahun ajaran (admin, tidak bisa hapus yang aktif)
 export async function DELETE(req: NextRequest) {
   if (!await isAdminFromRequest(req))
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -66,7 +65,6 @@ export async function DELETE(req: NextRequest) {
   const id = req.nextUrl.searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'ID wajib' }, { status: 400 })
 
-  // Cek apakah aktif
   const { data: ta } = await supabaseAdmin()
     .from('tahun_ajaran').select('aktif').eq('id', id).single()
   if (ta?.aktif)
