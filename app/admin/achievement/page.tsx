@@ -62,16 +62,90 @@ function todayKudus(): string {
   return `Kudus, ${d.getDate()} ${M[d.getMonth()]} ${d.getFullYear()}`
 }
 
+// ─── Text formatting helpers ─────────────────────────────────
+function toTitleCase(str: string): string {
+  if (!str) return ''
+  return str.split(' ').map(word => {
+    if (!word) return ''
+    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+  }).join(' ')
+}
+
+function toSentenceCase(str: string): string {
+  if (!str) return ''
+  return str.charAt(0).toUpperCase() + str.slice(1)
+}
+
+// Sentence case per baris (untuk multiline)
+function toSentenceCaseLines(str: string): string {
+  if (!str) return ''
+  return str.split('\n').map(line => {
+    const trimmed = line.trim()
+    if (!trimmed) return line
+    // Jaga bullet point di awal
+    if (trimmed.startsWith('•')) {
+      const rest = trimmed.slice(1).trim()
+      return '• ' + toSentenceCase(rest)
+    }
+    return toSentenceCase(trimmed)
+  }).join('\n')
+}
+
+// Title case per baris
+function toTitleCaseLines(str: string): string {
+  if (!str) return ''
+  return str.split('\n').map(line => {
+    const trimmed = line.trim()
+    if (!trimmed) return line
+    if (trimmed.startsWith('•')) {
+      const rest = trimmed.slice(1).trim()
+      return '• ' + toTitleCase(rest)
+    }
+    return toTitleCase(trimmed)
+  }).join('\n')
+}
+
+// Kapitalkan nama bulan di awal kata (Januari, Februari, dst)
+const BULAN = ['januari','februari','maret','april','mei','juni',
+               'juli','agustus','september','oktober','november','desember']
+function kapitalisasiBulan(str: string): string {
+  if (!str) return ''
+  let result = str
+  BULAN.forEach(b => {
+    const regex = new RegExp(b, 'gi')
+    result = result.replace(regex, b.charAt(0).toUpperCase() + b.slice(1))
+  })
+  return result
+}
+
 // ─── Build HTML satu halaman achievement ─────────────────────
 function buildCardHTML(item: SantriItem, motivasi: string, tanggal: string, tahunAjaran: string, cfg: AchConfig): string {
   const { santri, prestasi } = item
+
+  // ── Format nama santri → Title Case ──
+  const namaSantri = toTitleCase(santri.nama || '')
+
   const tahfidz    = prestasi?.prestasi_tahfidz    || []
-  const nonTahfidz = prestasi?.prestasi_non_tahfidz || []
-  const kegiatan   = [
-    ...(prestasi?.kegiatan_sekolah?.split('\n').filter(Boolean) || []),
-    ...(prestasi?.kegiatan_pondok?.split('\n').filter(Boolean)  || []),
+  const nonTahfidz = (prestasi?.prestasi_non_tahfidz || []).map((n: any) => ({
+    ...n,
+    // Juara → Sentence case, Cabang lomba → Title Case
+    // Penyelenggara → Sentence case, Bulan → kapitalkan nama bulan
+    juara:         toSentenceCase(n.juara || ''),
+    cabang:        toTitleCase(n.cabang || ''),
+    penyelenggara: (n.penyelenggara || '').toUpperCase(),
+    bulan_tahun:   kapitalisasiBulan(n.bulan_tahun || ''),
+  }))
+
+  // Kegiatan → Title Case per baris
+  const kegiatan = [
+    ...(prestasi?.kegiatan_sekolah ? toTitleCaseLines(prestasi.kegiatan_sekolah).split('\n').filter(Boolean) : []),
+    ...(prestasi?.kegiatan_pondok  ? toTitleCaseLines(prestasi.kegiatan_pondok).split('\n').filter(Boolean)  : []),
   ]
-  const progres = prestasi?.progres_pribadi?.split('\n').filter(Boolean) || []
+
+  // Progres → Sentence case per baris
+  const progres = prestasi?.progres_pribadi
+    ? toSentenceCaseLines(prestasi.progres_pribadi).split('\n').filter(Boolean)
+    : []
 
   const hasTahfidz  = tahfidz.length > 0
   const hasNon      = nonTahfidz.length > 0
@@ -204,7 +278,7 @@ function buildCardHTML(item: SantriItem, motivasi: string, tanggal: string, tahu
     <!-- Nama -->
     <div class="nama-box">
       <div class="diberikan">${cfg.label_diberikan}</div>
-      <div class="nama">${santri.nama}</div>
+      <div class="nama">${namaSantri}</div>
       <div class="kelas-txt">${santri.kelas?.nama || ''}</div>
     </div>
     <!-- Grid prestasi -->
