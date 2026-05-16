@@ -10,7 +10,19 @@ type AchConfig  = {
   teks_motivasi_1: string; teks_motivasi_2: string; teks_motivasi_3: string
   label_motivasi: string; teks_ayat: string; referensi_ayat: string
   warna_tahfidz: string; warna_non_tahfidz: string; warna_kegiatan: string; warna_progres: string
-  ukuran_judul: number; ukuran_nama: number; ukuran_isi: number; ukuran_logo: number
+  warna_judul: string; warna_inst: string; warna_subjudul: string
+  warna_label: string; warna_nama: string; warna_kelas: string
+  warna_motivasi_title: string; warna_motivasi: string
+  warna_ayat: string; warna_ayat_ref: string; warna_tanggal: string
+  ukuran_logo: number; ukuran_judul: number; ukuran_inst: number
+  ukuran_subjudul: number; ukuran_label: number; ukuran_nama: number
+  ukuran_kelas: number; ukuran_hdr_kolom: number; ukuran_sub_kolom: number
+  ukuran_isi: number; ukuran_total_label: number; ukuran_total_num: number
+  ukuran_motivasi_title: number; ukuran_motivasi: number
+  ukuran_ayat: number; ukuran_tanggal: number
+  bold_judul: boolean; bold_inst: boolean; bold_subjudul: boolean
+  bold_label: boolean; bold_nama: boolean; bold_kelas: boolean
+  bold_isi: boolean; bold_motivasi: boolean; bold_ayat: boolean; bold_tanggal: boolean
   tampil_progres: boolean; tampil_motivasi: boolean; tampil_ayat: boolean
 }
 const DEFAULT_CFG: AchConfig = {
@@ -24,7 +36,19 @@ const DEFAULT_CFG: AchConfig = {
   referensi_ayat:"(QS. Al-'Ankabut: 69)",
   warna_tahfidz:"#b45309", warna_non_tahfidz:"#065f46",
   warna_kegiatan:"#1e40af", warna_progres:"#7c3aed",
-  ukuran_judul:28, ukuran_nama:21, ukuran_isi:9, ukuran_logo:80,
+  warna_judul:"#1a3a2a", warna_inst:"#374151", warna_subjudul:"#6b7280",
+  warna_label:"#9ca3af", warna_nama:"#1a5c3a", warna_kelas:"#4b5563",
+  warna_motivasi_title:"#92400e", warna_motivasi:"#374151",
+  warna_ayat:"#6b7280", warna_ayat_ref:"#b45309", warna_tanggal:"#374151",
+  ukuran_logo:80, ukuran_judul:28, ukuran_inst:9,
+  ukuran_subjudul:8, ukuran_label:7, ukuran_nama:21,
+  ukuran_kelas:10, ukuran_hdr_kolom:8, ukuran_sub_kolom:7,
+  ukuran_isi:9, ukuran_total_label:7, ukuran_total_num:19,
+  ukuran_motivasi_title:7, ukuran_motivasi:8,
+  ukuran_ayat:7, ukuran_tanggal:8,
+  bold_judul:true, bold_inst:true, bold_subjudul:false,
+  bold_label:true, bold_nama:true, bold_kelas:false,
+  bold_isi:false, bold_motivasi:false, bold_ayat:false, bold_tanggal:true,
   tampil_progres:true, tampil_motivasi:true, tampil_ayat:true
 }
 type JuzEntry   = { juz: number; level: number }
@@ -198,65 +222,56 @@ function buildCardHTML(item: SantriItem, motivasi: string, tanggal: string, tahu
   .c-br{bottom:3mm;right:3mm;border-width:0 4px 4px 0}
   .wm{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);font-size:65px;opacity:0.03;color:#1a5c3a;font-weight:700;white-space:nowrap;letter-spacing:8px;pointer-events:none}
   .content{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;gap:2.5mm}
-  /* Header */
   .logo{width:${cfg.ukuran_logo}px;height:${cfg.ukuran_logo}px;object-fit:contain;display:block;margin:0 auto 2.5mm}
-  .inst{font-size:9pt;font-weight:600;letter-spacing:3px;color:#374151;text-transform:uppercase;text-align:center;margin-bottom:1mm}
-  .title{font-size:${cfg.ukuran_judul}pt;font-weight:700;color:#1a3a2a;letter-spacing:5px;text-align:center;margin-bottom:1mm}
+  .inst{font-size:${cfg.ukuran_inst}pt;font-weight:${cfg.bold_inst?700:500};letter-spacing:3px;color:${cfg.warna_inst};text-transform:uppercase;text-align:center;margin-bottom:1mm}
+  .title{font-size:${cfg.ukuran_judul}pt;font-weight:${cfg.bold_judul?700:400};color:${cfg.warna_judul};letter-spacing:5px;text-align:center;margin-bottom:1mm}
   .divider{display:flex;align-items:center;justify-content:center;gap:6px;margin:0.5mm 0}
   .dl{height:1px;width:40px;background:linear-gradient(to right,transparent,#B8860B)}
   .dr{height:1px;width:40px;background:linear-gradient(to left,transparent,#B8860B)}
-  .subtitle{font-size:8.5pt;font-weight:400;color:#6b7280;font-style:italic;text-align:center}
-  /* Nama */
+  .subtitle{font-size:${cfg.ukuran_subjudul}pt;font-weight:${cfg.bold_subjudul?600:400};color:${cfg.warna_subjudul};font-style:italic;text-align:center}
   .nama-box{background:linear-gradient(135deg,#f9f6ed,#fdf8ef);border:1.5px solid #D4AF37;border-radius:8px;padding:3mm 8mm;text-align:center;box-shadow:0 2px 8px rgba(184,134,11,.12)}
-  .diberikan{font-size:7.5pt;font-weight:600;color:#9ca3af;letter-spacing:3px;text-transform:uppercase;margin-bottom:1.5mm}
-  .nama{font-size:${cfg.ukuran_nama}pt;font-weight:700;color:#1a5c3a;margin-bottom:1mm;line-height:1.2}
-  .kelas-txt{font-size:10pt;font-weight:500;color:#4b5563}
-  /* Grid 3 kolom */
+  .diberikan{font-size:${cfg.ukuran_label}pt;font-weight:${cfg.bold_label?700:600};color:${cfg.warna_label};letter-spacing:3px;text-transform:uppercase;margin-bottom:1.5mm}
+  .nama{font-size:${cfg.ukuran_nama}pt;font-weight:${cfg.bold_nama?700:400};color:${cfg.warna_nama};margin-bottom:1mm;line-height:1.2}
+  .kelas-txt{font-size:${cfg.ukuran_kelas}pt;font-weight:${cfg.bold_kelas?600:500};color:${cfg.warna_kelas}}
   .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2.5mm}
   .col{border-radius:7px;overflow:hidden;display:flex;flex-direction:column}
   .col-hdr{padding:2.5mm;text-align:center}
-  .col-hdr-t{font-size:8.5pt;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase}
-  .col-hdr-s{font-size:7.5pt;font-weight:500;letter-spacing:0.5px;text-transform:uppercase;margin-top:1px}
-  /* Tahfidz */
-  .col-tahfidz{border:1.5px solid #b45309}
+  .col-hdr-t{font-size:${cfg.ukuran_hdr_kolom}pt;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase}
+  .col-hdr-s{font-size:${cfg.ukuran_sub_kolom}pt;font-weight:500;letter-spacing:0.5px;text-transform:uppercase;margin-top:1px}
+  .col-tahfidz{border:1.5px solid ${cfg.warna_tahfidz}}
   .col-tahfidz .col-hdr{background:linear-gradient(135deg,#78350f,${cfg.warna_tahfidz})}
   .col-tahfidz .col-hdr-s{color:#fef3c7}
-  .col-tahfidz .col-body{background:#fffbeb;flex:1;padding:2.5mm;font-size:${cfg.ukuran_isi}pt;color:#451a03}
+  .col-tahfidz .col-body{background:#fffbeb;flex:1;padding:2.5mm;font-size:${cfg.ukuran_isi}pt;color:#451a03;font-weight:${cfg.bold_isi?600:400}}
   .total-box{background:linear-gradient(135deg,#92400e,#D4AF37);border-radius:5px;padding:2mm;text-align:center;margin-bottom:2mm}
-  .total-label{font-size:7pt;font-weight:600;color:#fef9c3;letter-spacing:1px;text-transform:uppercase}
-  .total-num{font-size:19pt;font-weight:700;color:#fff;line-height:1.1}
-  .total-unit{font-size:8pt;font-weight:600;color:#fef3c7}
-  .juz-row{display:flex;align-items:center;gap:2mm;margin-bottom:1.5mm;font-size:8.5pt;color:#451a03;font-weight:500}
-  /* Non tahfidz */
-  .col-non{border:1.5px solid #065f46}
+  .total-label{font-size:${cfg.ukuran_total_label}pt;font-weight:600;color:#fef9c3;letter-spacing:1px;text-transform:uppercase}
+  .total-num{font-size:${cfg.ukuran_total_num}pt;font-weight:700;color:#fff;line-height:1.1}
+  .total-unit{font-size:${cfg.ukuran_total_label}pt;font-weight:600;color:#fef3c7}
+  .juz-row{display:flex;align-items:center;gap:2mm;margin-bottom:1.5mm;font-size:${cfg.ukuran_isi}pt;color:#451a03;font-weight:${cfg.bold_isi?600:500}}
+  .col-non{border:1.5px solid ${cfg.warna_non_tahfidz}}
   .col-non .col-hdr{background:linear-gradient(135deg,#064e3b,${cfg.warna_non_tahfidz})}
   .col-non .col-hdr-s{color:#a7f3d0}
-  .col-non .col-body{background:#ecfdf5;flex:1;padding:2.5mm;font-size:${cfg.ukuran_isi}pt;color:#064e3b}
-  .non-juara{font-weight:700;display:flex;gap:2mm;align-items:flex-start;margin-bottom:1px;font-size:8.5pt;color:#064e3b}
-  .non-detail{color:#065f46;margin-left:5mm;font-size:8pt;font-weight:500}
-  .non-small{color:#374151;font-size:7.5pt;margin-left:5mm;font-weight:400}
-  /* Kegiatan */
-  .col-keg{border:1.5px solid #1e40af}
+  .col-non .col-body{background:#ecfdf5;flex:1;padding:2.5mm;font-size:${cfg.ukuran_isi}pt;color:#064e3b;font-weight:${cfg.bold_isi?600:400}}
+  .non-juara{font-weight:${cfg.bold_isi?700:600};display:flex;gap:2mm;align-items:flex-start;margin-bottom:1px;font-size:${cfg.ukuran_isi}pt;color:#064e3b}
+  .non-detail{color:#065f46;margin-left:5mm;font-size:${cfg.ukuran_isi}pt;font-weight:${cfg.bold_isi?600:500}}
+  .non-small{color:#374151;font-size:${cfg.ukuran_isi}pt;margin-left:5mm;font-weight:400}
+  .col-keg{border:1.5px solid ${cfg.warna_kegiatan}}
   .col-keg .col-hdr{background:linear-gradient(135deg,#1e3a8a,${cfg.warna_kegiatan})}
   .col-keg .col-hdr-s{color:#bfdbfe}
-  .col-keg .col-body{background:#eff6ff;flex:1;padding:2.5mm;font-size:${cfg.ukuran_isi}pt;color:#1e3a8a}
-  .keg-row{display:flex;gap:2mm;margin-bottom:1.5mm;align-items:flex-start;font-weight:500;color:#1e3a8a}
-  .empty{color:#9ca3af;font-style:italic;font-size:8pt;font-weight:400}
-  /* Progres Pribadi */
-  .progres-box{background:linear-gradient(135deg,#f5f3ff,#ede9fe);border:1.5px solid #7c3aed;border-radius:7px;overflow:hidden}
+  .col-keg .col-body{background:#eff6ff;flex:1;padding:2.5mm;font-size:${cfg.ukuran_isi}pt;color:#1e3a8a;font-weight:${cfg.bold_isi?600:500}}
+  .keg-row{display:flex;gap:2mm;margin-bottom:1.5mm;align-items:flex-start;font-weight:${cfg.bold_isi?600:500};color:#1e3a8a}
+  .empty{color:#9ca3af;font-style:italic;font-size:${cfg.ukuran_isi}pt;font-weight:400}
+  .progres-box{background:linear-gradient(135deg,#f5f3ff,#ede9fe);border:1.5px solid ${cfg.warna_progres};border-radius:7px;overflow:hidden}
   .progres-hdr{background:linear-gradient(135deg,#4c1d95,${cfg.warna_progres});padding:2.5mm 3mm;display:flex;align-items:center;gap:2mm}
-  .progres-hdr-t{font-size:8.5pt;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase}
+  .progres-hdr-t{font-size:${cfg.ukuran_hdr_kolom}pt;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase}
   .progres-body{padding:2.5mm 3mm;display:flex;flex-wrap:wrap;gap:1.5mm}
-  .prog-row{display:flex;gap:2mm;align-items:flex-start;font-size:8.5pt;color:#4c1d95;font-weight:500;width:calc(50% - 0.75mm)}
-  /* Motivasi */
+  .prog-row{display:flex;gap:2mm;align-items:flex-start;font-size:${cfg.ukuran_isi}pt;color:#4c1d95;font-weight:${cfg.bold_isi?600:500};width:calc(50% - 0.75mm)}
   .motivasi{background:linear-gradient(135deg,#f9f6ed,#fdf8ef);border:1px solid #d97706;border-radius:7px;padding:2mm 5mm;text-align:center}
-  .motivasi-title{font-size:7.5pt;font-weight:700;color:#92400e;letter-spacing:2px;text-transform:uppercase;margin-bottom:1mm}
-  .motivasi-text{font-size:8.5pt;font-weight:400;color:#374151;font-style:italic;line-height:1.7}
-  /* Footer */
+  .motivasi-title{font-size:${cfg.ukuran_motivasi_title}pt;font-weight:700;color:${cfg.warna_motivasi_title};letter-spacing:2px;text-transform:uppercase;margin-bottom:1mm}
+  .motivasi-text{font-size:${cfg.ukuran_motivasi}pt;font-weight:${cfg.bold_motivasi?500:400};color:${cfg.warna_motivasi};font-style:italic;line-height:1.7}
   .footer{border-top:1px solid #d1d5db;padding-top:2mm;margin-bottom:1mm;display:flex;justify-content:space-between;align-items:center}
-  .ayat{font-size:7.5pt;font-weight:400;color:#6b7280;font-style:italic;line-height:1.7;max-width:65%}
-  .ayat-ref{color:#b45309;display:block;margin-top:1mm;font-weight:600}
-  .tgl{font-size:8pt;font-weight:600;color:#374151;text-align:right}
+  .ayat{font-size:${cfg.ukuran_ayat}pt;font-weight:${cfg.bold_ayat?600:400};color:${cfg.warna_ayat};font-style:italic;line-height:1.7;max-width:65%}
+  .ayat-ref{color:${cfg.warna_ayat_ref};display:block;margin-top:1mm;font-weight:${cfg.bold_ayat?700:600}}
+  .tgl{font-size:${cfg.ukuran_tanggal}pt;font-weight:${cfg.bold_tanggal?700:600};color:${cfg.warna_tanggal};text-align:right}
 </style>
 </head>
 <body>
