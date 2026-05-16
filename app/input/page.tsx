@@ -268,17 +268,50 @@ function RekapTab({ kelas }: { kelas: Kelas }) {
   const [data, setData]         = useState<SantriWithPrestasi[]>([])
   const [loading, setLoading]   = useState(true)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const [editing, setEditing]   = useState<Prestasi|null>(null)
+  const [editForm, setEditForm] = useState<Partial<Prestasi>>({})
+  const [saving, setSaving]     = useState(false)
+  const [msg, setMsg]           = useState('')
 
-  useEffect(()=>{
+  const loadData = () => {
     setLoading(true)
     fetch(`/api/santri?kelas_id=${kelas.id}`).then(r=>r.json()).then(async(sl:Santri[])=>{
       const wp=await Promise.all(sl.map(async s=>{ const pr=await fetch(`/api/prestasi?santri_id=${s.id}`); return {...s,prestasi:await pr.json() as Prestasi[]} }))
       setData(wp); setExpanded(new Set(sl.map(s=>s.id))); setLoading(false)
     })
-  },[kelas.id])
+  }
+
+  useEffect(()=>{ loadData() },[kelas.id])
 
   const toggle=(id:string)=>setExpanded(p=>{const n=new Set(p);n.has(id)?n.delete(id):n.add(id);return n})
   const sudahIsi=data.filter(s=>s.prestasi.length>0).length
+
+  const startEdit = (p: Prestasi) => { setEditing(p); setEditForm({...p}) }
+
+  const saveEdit = async () => {
+    if(!editing) return
+    setSaving(true)
+    const res = await fetch(`/api/prestasi?id=${editing.id}`, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        kegiatan_sekolah:     editForm.kegiatan_sekolah,
+        kegiatan_pondok:      editForm.kegiatan_pondok,
+        prestasi_tahfidz:     editForm.prestasi_tahfidz,
+        prestasi_non_tahfidz: editForm.prestasi_non_tahfidz,
+        progres_pribadi:      editForm.progres_pribadi,
+      })
+    })
+    if(res.ok) {
+      setEditing(null)
+      setMsg('✓ Data berhasil diperbarui')
+      loadData()
+    } else {
+      setMsg('Gagal menyimpan')
+    }
+    setSaving(false)
+    setTimeout(()=>setMsg(''),3000)
+  }
 
   if(loading) return <div className="py-16 text-center text-sm text-gray-400">Memuat data rekap...</div>
   return (
@@ -286,6 +319,7 @@ function RekapTab({ kelas }: { kelas: Kelas }) {
       <div className="flex gap-4 px-1 mb-4 flex-wrap items-center">
         <span className="text-xs text-gray-500">{data.length} santri</span>
         <span className="text-xs text-emerald-600 font-medium">{sudahIsi} sudah ada data</span>
+        {msg && <span className={`text-xs font-medium ${msg.startsWith('✓')?'text-emerald-600':'text-red-500'}`}>{msg}</span>}
         <div className="ml-auto flex gap-3">
           <button onClick={()=>setExpanded(new Set(data.map(s=>s.id)))} className="text-xs text-gray-400 hover:text-gray-600">Buka semua</button>
           <button onClick={()=>setExpanded(new Set())} className="text-xs text-gray-400 hover:text-gray-600">Tutup semua</button>
@@ -309,27 +343,87 @@ function RekapTab({ kelas }: { kelas: Kelas }) {
                   {santri.prestasi.length===0&&<p className="text-xs text-gray-400 py-3 pl-10">Belum ada data.</p>}
                   {santri.prestasi.map((p,pi)=>(
                     <div key={p.id} className="ml-10 mt-3 bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
-                      <p className="text-xs text-gray-400 mb-3">Entri {pi+1} · {new Date(p.updated_at).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'})}</p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {p.prestasi_tahfidz?.length>0&&(
-                          <div className="rounded-lg border p-2.5 bg-amber-50 text-amber-700 border-amber-100">
-                            <p className="text-[10px] font-bold uppercase opacity-60 mb-1">Prestasi Tahfidz</p>
-                            <p className="text-xs">{p.prestasi_tahfidz.map(j=>`Juz ${j.juz} (${JUZ_LEVEL_LABEL[j.level]})`).join(', ')}</p>
+                      {/* Header entri */}
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-xs text-gray-400">Entri {pi+1} · {new Date(p.updated_at).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'})}</p>
+                        {editing?.id===p.id ? (
+                          <div className="flex gap-2">
+                            <button onClick={saveEdit} disabled={saving}
+                              className="text-xs bg-emerald-600 text-white px-3 py-1 rounded-lg font-medium disabled:opacity-50">
+                              {saving?'Menyimpan...':'Simpan'}
+                            </button>
+                            <button onClick={()=>setEditing(null)}
+                              className="text-xs border border-gray-200 px-3 py-1 rounded-lg text-gray-500">
+                              Batal
+                            </button>
                           </div>
+                        ) : (
+                          <button onClick={()=>startEdit(p)}
+                            className="text-xs border border-emerald-200 text-emerald-600 px-3 py-1 rounded-lg hover:bg-emerald-50 transition-colors font-medium">
+                            ✏️ Edit
+                          </button>
                         )}
-                        {p.prestasi_non_tahfidz?.length>0&&(
-                          <div className="rounded-lg border p-2.5 bg-emerald-50 text-emerald-700 border-emerald-100">
-                            <p className="text-[10px] font-bold uppercase opacity-60 mb-1">Prestasi Non Tahfidz</p>
-                            {p.prestasi_non_tahfidz.map((n,ni)=><p key={ni} className="text-xs">• {n.juara} – {n.cabang}</p>)}
-                          </div>
-                        )}
-                        {FIELD_LABELS.map(f=>{ const val=(p as any)[f.key]; if(!val) return null; return (
-                          <div key={f.key as string} className={`rounded-lg border p-2.5 ${COLOR_MAP[f.color]}`}>
-                            <p className="text-[10px] font-bold uppercase opacity-60 mb-1">{f.label}</p>
-                            <p className="text-xs whitespace-pre-line leading-relaxed">{val}</p>
-                          </div>
-                        )})}
                       </div>
+
+                      {/* Mode edit */}
+                      {editing?.id===p.id ? (
+                        <div className="space-y-3">
+                          {/* Kegiatan Sekolah */}
+                          <div>
+                            <p className="text-[10px] font-bold uppercase text-gray-400 mb-1">Kegiatan Sekolah</p>
+                            <textarea rows={2} className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-emerald-400"
+                              value={editForm.kegiatan_sekolah||''} onChange={e=>setEditForm(f=>({...f,kegiatan_sekolah:e.target.value}))}/>
+                          </div>
+                          {/* Kegiatan Pondok */}
+                          <div>
+                            <p className="text-[10px] font-bold uppercase text-gray-400 mb-1">Kegiatan Pondok</p>
+                            <textarea rows={2} className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-emerald-400"
+                              value={editForm.kegiatan_pondok||''} onChange={e=>setEditForm(f=>({...f,kegiatan_pondok:e.target.value}))}/>
+                          </div>
+                          {/* Tahfidz - JuzPicker */}
+                          <div>
+                            <p className="text-[10px] font-bold uppercase text-gray-400 mb-2">Prestasi Tahfidz</p>
+                            <JuzPicker
+                              value={editForm.prestasi_tahfidz||[]}
+                              onChange={v=>setEditForm(f=>({...f,prestasi_tahfidz:v}))}/>
+                          </div>
+                          {/* Non Tahfidz */}
+                          <div>
+                            <p className="text-[10px] font-bold uppercase text-gray-400 mb-2">Prestasi Non Tahfidz</p>
+                            <NonTahfidzInput
+                              value={editForm.prestasi_non_tahfidz||[]}
+                              onChange={v=>setEditForm(f=>({...f,prestasi_non_tahfidz:v}))}/>
+                          </div>
+                          {/* Progres Pribadi */}
+                          <div>
+                            <p className="text-[10px] font-bold uppercase text-gray-400 mb-1">Progres Pribadi</p>
+                            <textarea rows={3} className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-emerald-400"
+                              value={editForm.progres_pribadi||''} onChange={e=>setEditForm(f=>({...f,progres_pribadi:e.target.value}))}/>
+                          </div>
+                        </div>
+                      ) : (
+                        /* Mode tampil */
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {p.prestasi_tahfidz?.length>0&&(
+                            <div className="rounded-lg border p-2.5 bg-amber-50 text-amber-700 border-amber-100">
+                              <p className="text-[10px] font-bold uppercase opacity-60 mb-1">Prestasi Tahfidz</p>
+                              <p className="text-xs">{p.prestasi_tahfidz.map(j=>`Juz ${j.juz} (${JUZ_LEVEL_LABEL[j.level]})`).join(', ')}</p>
+                            </div>
+                          )}
+                          {p.prestasi_non_tahfidz?.length>0&&(
+                            <div className="rounded-lg border p-2.5 bg-emerald-50 text-emerald-700 border-emerald-100">
+                              <p className="text-[10px] font-bold uppercase opacity-60 mb-1">Prestasi Non Tahfidz</p>
+                              {p.prestasi_non_tahfidz.map((n,ni)=><p key={ni} className="text-xs">• {n.juara} – {n.cabang}</p>)}
+                            </div>
+                          )}
+                          {FIELD_LABELS.map(f=>{ const val=(p as any)[f.key]; if(!val) return null; return (
+                            <div key={f.key as string} className={`rounded-lg border p-2.5 ${COLOR_MAP[f.color]}`}>
+                              <p className="text-[10px] font-bold uppercase opacity-60 mb-1">{f.label}</p>
+                              <p className="text-xs whitespace-pre-line leading-relaxed">{val}</p>
+                            </div>
+                          )})}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
