@@ -23,53 +23,27 @@ export async function POST(req: NextRequest) {
 
   if (body.bulk && Array.isArray(body.bulk)) {
     const rows = body.bulk.filter((r: any) => r.nama?.trim())
-
     const toUpdate = rows.filter((r: any) => r.id)
     const toInsert = rows.filter((r: any) => !r.id)
 
-    const errors: string[] = []
-
-    // 1. Update yang sudah ada (by id) — no conflict
+    // Update yang sudah ada (by id) - langsung update, no conflict
     for (const r of toUpdate) {
-      const { error } = await db.from('santri')
+      await db.from('santri')
         .update({ nama: r.nama.trim(), no_urut: r.no_urut, keterangan: r.keterangan || '' })
         .eq('id', r.id)
-      if (error) errors.push(error.message)
     }
 
-    // 2. Insert yang baru — kalau no_urut tabrakan, geser dulu ke no sementara besar
+    // Insert yang baru
     if (toInsert.length > 0) {
-      // Ambil max no_urut yang ada di kelas ini
-      const { data: existing } = await db
-        .from('santri').select('no_urut').eq('kelas_id', body.kelas_id).eq('aktif', true)
-      const usedNos = new Set((existing || []).map((s: any) => s.no_urut))
-
-      // Assign no_urut yang aman (tidak tabrakan)
-      let counter = 1
-      const safeInsert = toInsert.map((r: any) => {
-        // Pakai no_urut dari draft jika tidak tabrakan, kalau tabrakan cari yang kosong
-        let no = r.no_urut
-        if (usedNos.has(no)) {
-          // Cari no_urut yang belum dipakai
-          while (usedNos.has(counter)) counter++
-          no = counter
-          counter++
-        }
-        usedNos.add(no)
-        return {
-          kelas_id: body.kelas_id,
-          nama: r.nama.trim(),
-          no_urut: no,
-          keterangan: r.keterangan || ''
-        }
-      })
-
-      const { error } = await db.from('santri').insert(safeInsert)
-      if (error) errors.push(error.message)
+      const insertRows = toInsert.map((r: any) => ({
+        kelas_id: body.kelas_id,
+        nama: r.nama.trim(),
+        no_urut: r.no_urut,
+        keterangan: r.keterangan || ''
+      }))
+      const { error } = await db.from('santri').insert(insertRows)
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     }
-
-    if (errors.length)
-      return NextResponse.json({ error: errors.join(', ') }, { status: 500 })
 
     return NextResponse.json({ inserted: rows.length }, { status: 201 })
   }
@@ -80,8 +54,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'kelas_id, nama, no_urut wajib diisi' }, { status: 400 })
 
   const { data, error } = await db
-    .from('santri')
-    .insert({ kelas_id, nama: nama.trim(), no_urut, keterangan: keterangan || '' })
+    .from('santri').insert({ kelas_id, nama: nama.trim(), no_urut, keterangan: keterangan || '' })
     .select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
