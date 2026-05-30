@@ -26,26 +26,42 @@ function ModalPindahKelas({
     if (!targetKelasId) { setError('Pilih kelas tujuan'); return }
     setSaving(true)
     try {
-      // Ambil daftar santri di kelas tujuan untuk cari no_urut berikutnya
-      const r = await fetch(`/api/santri?kelas_id=${targetKelasId}`)
-      const existing = await r.json()
-      const maxNo = existing.length > 0
-        ? Math.max(...existing.map((s: any) => s.no_urut))
+      // 1. Ambil santri di kelas tujuan → cari no_urut berikutnya
+      const rTujuan = await fetch(`/api/santri?kelas_id=${targetKelasId}`)
+      const existingTujuan = await rTujuan.json()
+      const maxNo = existingTujuan.length > 0
+        ? Math.max(...existingTujuan.map((s: any) => s.no_urut))
         : 0
       const nextNo = maxNo + 1
 
+      // 2. Pindahkan santri ke kelas tujuan dengan no_urut baru
       const res = await fetch(`/api/santri?id=${santri.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ kelas_id: targetKelasId, no_urut: nextNo })
       })
-      if (res.ok) {
-        onSaved()
-        onClose()
-      } else {
+      if (!res.ok) {
         const d = await res.json()
         setError(d.error || 'Gagal memindahkan')
+        setSaving(false)
+        return
       }
+
+      // 3. Renumber santri yang tersisa di kelas asal agar tetap urut
+      const rAsal = await fetch(`/api/santri?kelas_id=${currentKelasId}`)
+      const sisaAsal: any[] = await rAsal.json()
+      // Sort by no_urut, lalu assign ulang 1,2,3,...
+      const sorted = [...sisaAsal].sort((a,b) => a.no_urut - b.no_urut)
+      await Promise.all(sorted.map((s, idx) =>
+        fetch(`/api/santri?id=${s.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ no_urut: idx + 1 })
+        })
+      ))
+
+      onSaved()
+      onClose()
     } catch {
       setError('Terjadi kesalahan. Coba lagi.')
     }
@@ -117,6 +133,7 @@ export default function SantriPage() {
   const [pasteActive, setPasteActive] = useState(false)
   const [modalSantri, setModalSantri] = useState<Santri | null>(null)
   const [tab, setTab]                 = useState<'input'|'daftar'>('input')
+  const [rapikan, setRapikan]         = useState(false)
 
   useEffect(() => {
     fetch('/api/kelas').then(r => r.json()).then((k: Kelas[]) => {
@@ -214,6 +231,25 @@ export default function SantriPage() {
   }
 
   const flash = (m: string) => { setMsg(m); setTimeout(() => setMsg(''), 3000) }
+
+  const rapikanNomor = async () => {
+    if (!activeKelas) return
+    if (!confirm('Rapikan nomor urut santri di ' + activeKelas.nama + '?\nNomor akan diurutkan ulang dari 1.')) return
+    setRapikan(true)
+    const r = await fetch(`/api/santri?kelas_id=${activeKelas.id}`)
+    const list: Santri[] = await r.json()
+    const sorted = [...list].sort((a, b) => a.no_urut - b.no_urut)
+    await Promise.all(sorted.map((s, idx) =>
+      fetch(`/api/santri?id=${s.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ no_urut: idx + 1 })
+      })
+    ))
+    await selectKelas(activeKelas)
+    flash('✓ Nomor urut berhasil dirapikan')
+    setRapikan(false)
+  }
 
   return (
     <div>
@@ -366,9 +402,14 @@ export default function SantriPage() {
         {tab === 'daftar' && (
           <div>
             <p className="text-xs text-gray-500 mb-4">
-              Tap tombol <strong>Pindah</strong> untuk memindahkan santri ke kelas lain.
-              Data prestasi tidak akan terhapus.
+              Tap <strong>Pindah</strong> untuk pindah kelas. Data prestasi tidak terhapus.
             </p>
+            <div className="flex justify-end mb-3">
+              <button onClick={rapikanNomor} disabled={rapikan}
+                className="btn text-xs py-1 text-amber-600 border-amber-200 hover:bg-amber-50 disabled:opacity-50">
+                {rapikan ? '⏳ Merapikan...' : '🔢 Rapikan Nomor Urut'}
+              </button>
+            </div>
             <div className="divide-y divide-gray-50">
               {santriList.length === 0 && (
                 <p className="py-8 text-center text-sm text-gray-400">Belum ada santri di kelas ini</p>
