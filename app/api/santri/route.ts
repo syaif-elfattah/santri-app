@@ -28,45 +28,38 @@ export async function POST(req: NextRequest) {
   const body = await req.json()
   const db = supabaseAdmin()
 
-  // Bulk insert — pakai INSERT biasa bukan upsert agar tidak menimpa data
   if (body.bulk && Array.isArray(body.bulk)) {
-    const rows = body.bulk
-      .filter((r: any) => r.nama?.trim())
-      .map((r: any, i: number) => ({
-        kelas_id: body.kelas_id,
-        nama: r.nama.trim(),
-        no_urut: r.no_urut || i + 1,
-        keterangan: r.keterangan || ''
-      }))
+    const rows = body.bulk.filter((r: any) => r.nama?.trim())
 
-    if (!rows.length)
-      return NextResponse.json({ error: 'Tidak ada data valid' }, { status: 400 })
-
-    // Untuk setiap row: update jika sudah ada (by id jika ada), insert jika belum
-    // Simpan berdasarkan id yang dikirim (untuk edit), atau insert baru
-    const toInsert = rows.filter((r: any) => !r.id)
+    // Pisahkan: yang punya id = UPDATE, yang tidak = INSERT baru
     const toUpdate = rows.filter((r: any) => r.id)
+    const toInsert = rows.filter((r: any) => !r.id).map((r: any) => ({
+      kelas_id: body.kelas_id,
+      nama: r.nama.trim(),
+      no_urut: r.no_urut,
+      keterangan: r.keterangan || ''
+    }))
 
-    let inserted = 0
-    let errors: string[] = []
+    const errors: string[] = []
 
-    // Update yang sudah ada (by id)
+    // Update yang sudah ada
     for (const r of toUpdate) {
       const { error } = await db.from('santri')
-        .update({ nama: r.nama, no_urut: r.no_urut, keterangan: r.keterangan })
+        .update({ nama: r.nama.trim(), no_urut: r.no_urut, keterangan: r.keterangan || '' })
         .eq('id', r.id)
       if (error) errors.push(error.message)
     }
 
-    // Insert yang baru
+    // Insert yang baru saja
     if (toInsert.length > 0) {
-      const { data, error } = await db.from('santri').insert(toInsert).select()
+      const { error } = await db.from('santri').insert(toInsert)
       if (error) errors.push(error.message)
-      else inserted = data?.length || 0
     }
 
-    if (errors.length) return NextResponse.json({ error: errors.join(', ') }, { status: 500 })
-    return NextResponse.json({ inserted: inserted + toUpdate.length }, { status: 201 })
+    if (errors.length)
+      return NextResponse.json({ error: errors.join(', ') }, { status: 500 })
+
+    return NextResponse.json({ inserted: toInsert.length + toUpdate.length }, { status: 201 })
   }
 
   // Single insert
@@ -108,7 +101,6 @@ export async function DELETE(req: NextRequest) {
   const id = req.nextUrl.searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'ID wajib diisi' }, { status: 400 })
 
-  // Soft delete
   const { error } = await supabaseAdmin()
     .from('santri').update({ aktif: false }).eq('id', id)
 
