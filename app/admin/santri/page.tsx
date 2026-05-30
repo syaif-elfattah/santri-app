@@ -191,6 +191,17 @@ export default function SantriPage() {
     setDraft(data.map(s => ({ no_urut: s.no_urut, nama: s.nama, keterangan: s.keterangan })))
   }
 
+  const hapusSantri = async (s: Santri) => {
+    if (!confirm('Hapus ' + s.nama + '?\nData prestasi santri ini tidak ikut terhapus.')) return
+    const res = await fetch(`/api/santri?id=${s.id}`, { method: 'DELETE' })
+    if (res.ok) {
+      flash('✓ ' + s.nama + ' dihapus')
+      if (activeKelas) await selectKelas(activeKelas)
+    } else {
+      flash('Error: gagal menghapus')
+    }
+  }
+
   const addRow = () => {
     const nextNo = draft.length > 0 ? Math.max(...draft.map(d => d.no_urut)) + 1 : 1
     setDraft(d => [...d, { no_urut: nextNo, nama: '', keterangan: '' }])
@@ -236,18 +247,32 @@ export default function SantriPage() {
     if (!activeKelas) return
     if (!confirm('Rapikan nomor urut santri di ' + activeKelas.nama + '?\nNomor akan diurutkan ulang dari 1.')) return
     setRapikan(true)
-    const r = await fetch(`/api/santri?kelas_id=${activeKelas.id}`)
-    const list: Santri[] = await r.json()
-    const sorted = [...list].sort((a, b) => a.no_urut - b.no_urut)
-    await Promise.all(sorted.map((s, idx) =>
-      fetch(`/api/santri?id=${s.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ no_urut: idx + 1 })
-      })
-    ))
-    await selectKelas(activeKelas)
-    flash('✓ Nomor urut berhasil dirapikan')
+    try {
+      const r = await fetch(`/api/santri?kelas_id=${activeKelas.id}`)
+      const list: Santri[] = await r.json()
+      const sorted = [...list].sort((a, b) => a.no_urut - b.no_urut)
+
+      // Step 1: set ke nomor sementara besar (99001, 99002...) agar tidak tabrakan
+      await Promise.all(sorted.map((s, idx) =>
+        fetch(`/api/santri?id=${s.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ no_urut: 99000 + idx + 1 })
+        })
+      ))
+      // Step 2: set ke nomor final (1, 2, 3...)
+      await Promise.all(sorted.map((s, idx) =>
+        fetch(`/api/santri?id=${s.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ no_urut: idx + 1 })
+        })
+      ))
+      await selectKelas(activeKelas)
+      flash('✓ Nomor urut berhasil dirapikan')
+    } catch {
+      flash('Error: gagal merapikan nomor urut')
+    }
     setRapikan(false)
   }
 
@@ -369,11 +394,31 @@ export default function SantriPage() {
                           onChange={e => updateDraft(i, 'keterangan', e.target.value)} />
                       </td>
                       <td className="py-1 text-center">
-                        <button onClick={() => removeRow(i)}
-                          className="w-6 h-6 rounded text-red-300 hover:text-red-500 hover:bg-red-50
-                                     opacity-0 group-hover:opacity-100 transition-all text-xl leading-none">
-                          ×
-                        </button>
+                        <div className="flex gap-1 justify-center opacity-0 group-hover:opacity-100 transition-all">
+                          <button onClick={() => removeRow(i)}
+                            className="w-6 h-6 rounded text-gray-300 hover:text-gray-500 hover:bg-gray-100
+                                       transition-all text-xl leading-none" title="Hapus dari daftar (belum disimpan)">
+                            ×
+                          </button>
+                          {santriList[i]?.id && (
+                            <button
+                              onClick={async () => {
+                                if (!confirm('Hapus ' + santriList[i].nama + '?\nData prestasi santri ini tidak ikut terhapus.')) return
+                                const res = await fetch(`/api/santri?id=${santriList[i].id}`, { method: 'DELETE' })
+                                if (res.ok) {
+                                  flash('✓ ' + santriList[i].nama + ' dihapus')
+                                  if (activeKelas) await selectKelas(activeKelas)
+                                } else {
+                                  flash('Error: gagal menghapus')
+                                }
+                              }}
+                              className="w-6 h-6 rounded text-red-300 hover:text-red-500 hover:bg-red-50
+                                         transition-all text-sm leading-none flex items-center justify-center"
+                              title="Hapus permanen dari database">
+                              🗑
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -415,7 +460,7 @@ export default function SantriPage() {
                 <p className="py-8 text-center text-sm text-gray-400">Belum ada santri di kelas ini</p>
               )}
               {santriList.map(s => (
-                <div key={s.id} className="flex items-center gap-3 py-2.5">
+                <div key={s.id} className="flex items-center gap-3 py-2.5 group">
                   <span className="w-7 h-7 rounded-full bg-purple-50 text-purple-600 text-xs
                                    font-semibold flex items-center justify-center flex-shrink-0">
                     {s.no_urut}
@@ -427,6 +472,10 @@ export default function SantriPage() {
                   <button onClick={() => setModalSantri(s)}
                     className="btn text-xs py-1 text-purple-600 border-purple-200 hover:bg-purple-50 flex-shrink-0">
                     🔄 Pindah
+                  </button>
+                  <button onClick={() => hapusSantri(s)}
+                    className="btn text-xs py-1 text-red-400 border-red-200 hover:bg-red-50 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                    🗑 Hapus
                   </button>
                 </div>
               ))}
