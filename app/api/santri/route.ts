@@ -4,18 +4,11 @@ import { isAdminFromRequest } from '@/lib/auth'
 
 export async function GET(req: NextRequest) {
   const kelas_id = req.nextUrl.searchParams.get('kelas_id')
-
   let query = supabase
-    .from('santri')
-    .select('*, kelas(nama)')
-    .eq('aktif', true)
-    .order('no_urut')
-
+    .from('santri').select('*, kelas(nama)').eq('aktif', true).order('no_urut')
   if (kelas_id) query = query.eq('kelas_id', kelas_id)
-
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
   return NextResponse.json(data, {
     headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120' },
   })
@@ -31,18 +24,12 @@ export async function POST(req: NextRequest) {
   if (body.bulk && Array.isArray(body.bulk)) {
     const rows = body.bulk.filter((r: any) => r.nama?.trim())
 
-    // Pisahkan: yang punya id = UPDATE, yang tidak = INSERT baru
     const toUpdate = rows.filter((r: any) => r.id)
-    const toInsert = rows.filter((r: any) => !r.id).map((r: any) => ({
-      kelas_id: body.kelas_id,
-      nama: r.nama.trim(),
-      no_urut: r.no_urut,
-      keterangan: r.keterangan || ''
-    }))
+    const toInsert = rows.filter((r: any) => !r.id)
 
     const errors: string[] = []
 
-    // Update yang sudah ada
+    // 1. Update yang sudah ada (by id) — no conflict
     for (const r of toUpdate) {
       const { error } = await db.from('santri')
         .update({ nama: r.nama.trim(), no_urut: r.no_urut, keterangan: r.keterangan || '' })
@@ -50,16 +37,41 @@ export async function POST(req: NextRequest) {
       if (error) errors.push(error.message)
     }
 
-    // Insert yang baru saja
+    // 2. Insert yang baru — kalau no_urut tabrakan, geser dulu ke no sementara besar
     if (toInsert.length > 0) {
-      const { error } = await db.from('santri').insert(toInsert)
+      // Ambil max no_urut yang ada di kelas ini
+      const { data: existing } = await db
+        .from('santri').select('no_urut').eq('kelas_id', body.kelas_id).eq('aktif', true)
+      const usedNos = new Set((existing || []).map((s: any) => s.no_urut))
+
+      // Assign no_urut yang aman (tidak tabrakan)
+      let counter = 1
+      const safeInsert = toInsert.map((r: any) => {
+        // Pakai no_urut dari draft jika tidak tabrakan, kalau tabrakan cari yang kosong
+        let no = r.no_urut
+        if (usedNos.has(no)) {
+          // Cari no_urut yang belum dipakai
+          while (usedNos.has(counter)) counter++
+          no = counter
+          counter++
+        }
+        usedNos.add(no)
+        return {
+          kelas_id: body.kelas_id,
+          nama: r.nama.trim(),
+          no_urut: no,
+          keterangan: r.keterangan || ''
+        }
+      })
+
+      const { error } = await db.from('santri').insert(safeInsert)
       if (error) errors.push(error.message)
     }
 
     if (errors.length)
       return NextResponse.json({ error: errors.join(', ') }, { status: 500 })
 
-    return NextResponse.json({ inserted: toInsert.length + toUpdate.length }, { status: 201 })
+    return NextResponse.json({ inserted: rows.length }, { status: 201 })
   }
 
   // Single insert
