@@ -2,17 +2,109 @@
 import { useEffect, useState, useCallback } from 'react'
 
 type Kelas    = { id: string; nama: string }
-type Santri   = { id: string; nama: string; no_urut: number; keterangan: string }
+type Santri   = { id: string; nama: string; no_urut: number; keterangan: string; kelas_id: string }
 type RowDraft = { no_urut: number; nama: string; keterangan: string }
 
+// ── Modal Pindah Kelas ────────────────────────────────────────
+function ModalPindahKelas({
+  santri, kelasList, currentKelasId, onClose, onSaved
+}: {
+  santri: Santri
+  kelasList: Kelas[]
+  currentKelasId: string
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [targetKelasId, setTargetKelasId] = useState('')
+  const [saving, setSaving]               = useState(false)
+  const [error, setError]                 = useState('')
+
+  const kelasTujuan = kelasList.filter(k => k.id !== currentKelasId)
+  const currentNama = kelasList.find(k => k.id === currentKelasId)?.nama || ''
+
+  const pindah = async () => {
+    if (!targetKelasId) { setError('Pilih kelas tujuan'); return }
+    setSaving(true)
+    const res = await fetch(`/api/santri?id=${santri.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kelas_id: targetKelasId })
+    })
+    if (res.ok) {
+      onSaved()
+      onClose()
+    } else {
+      const d = await res.json()
+      setError(d.error || 'Gagal memindahkan')
+    }
+    setSaving(false)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+        <h3 className="font-semibold text-gray-900 mb-1">Pindah Kelas</h3>
+        <p className="text-sm text-gray-500 mb-5">
+          <span className="font-medium text-gray-700">{santri.nama}</span>
+          <span className="mx-2 text-gray-400">·</span>
+          <span className="text-xs bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full">{currentNama}</span>
+        </p>
+
+        <div className="mb-4">
+          <label className="label">Pindah ke kelas</label>
+          {kelasTujuan.length === 0 ? (
+            <p className="text-sm text-gray-400 italic">Tidak ada kelas lain yang tersedia</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-2 mt-1">
+              {kelasTujuan.map(k => (
+                <button key={k.id} onClick={() => setTargetKelasId(k.id)}
+                  className={`py-2 px-3 rounded-lg text-sm font-medium border transition-colors text-left
+                    ${targetKelasId === k.id
+                      ? 'bg-emerald-600 text-white border-emerald-700'
+                      : 'bg-white border-gray-200 text-gray-600 hover:border-emerald-300'}`}>
+                  {k.nama}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {targetKelasId && (
+          <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <p className="text-xs text-amber-700">
+              ⚠ Semua data prestasi <strong>{santri.nama}</strong> tetap tersimpan.
+              Hanya kelas yang berubah dari <strong>{currentNama}</strong> ke{' '}
+              <strong>{kelasList.find(k => k.id === targetKelasId)?.nama}</strong>.
+            </p>
+          </div>
+        )}
+
+        {error && <p className="text-sm text-red-500 mb-3">{error}</p>}
+
+        <div className="flex gap-2">
+          <button onClick={onClose} className="btn flex-1">Batal</button>
+          <button onClick={pindah} disabled={saving || !targetKelasId}
+            className="btn btn-primary flex-1 disabled:opacity-50">
+            {saving ? 'Memindahkan...' : 'Pindah Kelas'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Halaman Utama ─────────────────────────────────────────────
 export default function SantriPage() {
   const [kelasList, setKelasList]     = useState<Kelas[]>([])
   const [activeKelas, setActiveKelas] = useState<Kelas | null>(null)
+  const [santriList, setSantriList]   = useState<Santri[]>([])
   const [draft, setDraft]             = useState<RowDraft[]>([])
   const [editMode, setEditMode]       = useState(false)
   const [saving, setSaving]           = useState(false)
   const [msg, setMsg]                 = useState('')
   const [pasteActive, setPasteActive] = useState(false)
+  const [modalSantri, setModalSantri] = useState<Santri | null>(null)
+  const [tab, setTab]                 = useState<'input'|'daftar'>('input')
 
   useEffect(() => {
     fetch('/api/kelas').then(r => r.json()).then((k: Kelas[]) => {
@@ -25,34 +117,20 @@ export default function SantriPage() {
   const parsePasteText = useCallback((text: string) => {
     const lines = text.split(/\r?\n/).filter(l => l.trim())
     if (!lines.length) return
-
     const newRows: RowDraft[] = []
-
     lines.forEach(line => {
       const parts = line.split('\t').map(p => p.trim())
-      let no_urut = 0
-      let nama = ''
-      let keterangan = ''
-
+      let no_urut = 0, nama = '', keterangan = ''
       if (parts.length === 1) {
-        if (/^\d+$/.test(parts[0])) return   // angka saja → skip
+        if (/^\d+$/.test(parts[0])) return
         nama = parts[0]
       } else {
-        if (/^\d+$/.test(parts[0])) {
-          no_urut = parseInt(parts[0])
-          nama = parts[1] || ''
-          keterangan = parts[2] || ''
-        } else {
-          nama = parts[0]
-          keterangan = parts[1] || ''
-        }
+        if (/^\d+$/.test(parts[0])) { no_urut = parseInt(parts[0]); nama = parts[1]; keterangan = parts[2] || '' }
+        else { nama = parts[0]; keterangan = parts[1] || '' }
       }
-
       if (nama.trim()) newRows.push({ no_urut, nama: nama.trim(), keterangan: keterangan.trim() })
     })
-
     if (!newRows.length) return
-
     setDraft(prev => {
       const maxNo = prev.length > 0 ? Math.max(...prev.map(d => d.no_urut)) : 0
       let counter = maxNo
@@ -64,7 +142,6 @@ export default function SantriPage() {
     setTimeout(() => setMsg(''), 3000)
   }, [])
 
-  // Global paste — aktif saat tidak ada input yang difokus
   useEffect(() => {
     const handler = (e: ClipboardEvent) => {
       const tag = (e.target as HTMLElement).tagName
@@ -81,6 +158,7 @@ export default function SantriPage() {
     setEditMode(false)
     const r = await fetch(`/api/santri?kelas_id=${k.id}`)
     const data: Santri[] = await r.json()
+    setSantriList(data)
     setDraft(data.map(s => ({ no_urut: s.no_urut, nama: s.nama, keterangan: s.keterangan })))
   }
 
@@ -123,20 +201,33 @@ export default function SantriPage() {
     }
   }
 
+  const flash = (m: string) => { setMsg(m); setTimeout(() => setMsg(''), 3000) }
+
   return (
     <div>
+      {/* Modal pindah kelas */}
+      {modalSantri && activeKelas && (
+        <ModalPindahKelas
+          santri={modalSantri}
+          kelasList={kelasList}
+          currentKelasId={activeKelas.id}
+          onClose={() => setModalSantri(null)}
+          onSaved={() => { selectKelas(activeKelas); flash('✓ Santri berhasil dipindahkan') }}
+        />
+      )}
+
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-semibold">Data Santri</h1>
           <p className="text-sm text-gray-400 mt-0.5">Kelola nama santri per kelas</p>
         </div>
         <div className="flex gap-2">
-          {editMode && (
+          {editMode && tab === 'input' && (
             <button onClick={saveAll} disabled={saving} className="btn btn-primary text-sm">
               {saving ? 'Menyimpan...' : '💾 Simpan perubahan'}
             </button>
           )}
-          <button onClick={addRow} className="btn text-sm">+ Tambah baris</button>
+          {tab === 'input' && <button onClick={addRow} className="btn text-sm">+ Tambah baris</button>}
         </div>
       </div>
 
@@ -154,101 +245,141 @@ export default function SantriPage() {
       </div>
 
       <div className="card rounded-tl-none mt-0">
-
-        {/* Zona paste — div focusable, tangkap paste event langsung */}
-        <div
-          tabIndex={0}
-          onFocus={() => setPasteActive(true)}
-          onBlur={() => setPasteActive(false)}
-          onPaste={e => { e.preventDefault(); parsePasteText(e.clipboardData.getData('text')) }}
-          className={`mb-4 p-3 border rounded-lg transition-all cursor-pointer outline-none select-none
-            ${pasteActive
-              ? 'border-emerald-400 bg-emerald-50 ring-2 ring-emerald-200'
-              : 'border-dashed border-gray-300 bg-gray-50 hover:border-emerald-300 hover:bg-emerald-50'}`}>
-          <p className={`text-xs text-center ${pasteActive ? 'text-emerald-700 font-medium' : 'text-gray-500'}`}>
-            {pasteActive
-              ? '✅ Siap! Tekan Ctrl+V sekarang untuk paste data dari Excel'
-              : <>
-                  📋 Klik di sini → lalu tekan{' '}
-                  <kbd className="bg-white border border-gray-200 rounded px-1 font-mono">Ctrl+V</kbd>
-                  {' '}untuk paste banyak nama sekaligus dari Excel
-                </>
-            }
-          </p>
-          {!pasteActive && (
-            <p className="text-xs text-center text-gray-400 mt-1">
-              Format Excel: kolom A = No Urut, kolom B = Nama Santri — salin keduanya lalu paste
-            </p>
-          )}
+        {/* Sub-tab: Input / Daftar & Pindah */}
+        <div className="flex gap-1 mb-4 bg-gray-100 p-1 rounded-lg w-fit">
+          <button onClick={() => setTab('input')}
+            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors
+              ${tab === 'input' ? 'bg-white text-purple-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+            ✏️ Input / Edit Nama
+          </button>
+          <button onClick={() => setTab('daftar')}
+            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors
+              ${tab === 'daftar' ? 'bg-white text-purple-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+            🔄 Pindah Kelas
+          </button>
         </div>
 
         {msg && (
           <div className={`mb-3 px-3 py-2 rounded-lg border text-xs font-medium
-            ${msg.startsWith('Error')
-              ? 'bg-red-50 border-red-200 text-red-700'
-              : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}>
+            ${msg.startsWith('Error') ? 'bg-red-50 border-red-200 text-red-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}>
             {msg}
           </div>
         )}
 
-        {/* Tabel */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100">
-                <th className="pb-2 text-left text-xs font-medium text-gray-400 w-20">No</th>
-                <th className="pb-2 text-left text-xs font-medium text-gray-400">Nama Santri</th>
-                <th className="pb-2 text-left text-xs font-medium text-gray-400 hidden sm:table-cell">Keterangan</th>
-                <th className="pb-2 w-8"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {draft.map((row, i) => (
-                <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 group">
-                  <td className="py-1 pr-2">
-                    <input type="number" min={1}
-                      className="input text-center w-16 py-1 text-sm"
-                      value={row.no_urut}
-                      onChange={e => updateDraft(i, 'no_urut', parseInt(e.target.value) || 1)} />
-                  </td>
-                  <td className="py-1 pr-2">
-                    <input className="input py-1 text-sm" placeholder="Nama santri..."
-                      value={row.nama}
-                      onChange={e => updateDraft(i, 'nama', e.target.value)} />
-                  </td>
-                  <td className="py-1 pr-2 hidden sm:table-cell">
-                    <input className="input py-1 text-sm text-gray-500" placeholder="—"
-                      value={row.keterangan}
-                      onChange={e => updateDraft(i, 'keterangan', e.target.value)} />
-                  </td>
-                  <td className="py-1 text-center">
-                    <button onClick={() => removeRow(i)}
-                      className="w-6 h-6 rounded text-red-300 hover:text-red-500 hover:bg-red-50
-                                 opacity-0 group-hover:opacity-100 transition-all text-xl leading-none">
-                      ×
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {draft.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="py-12 text-center text-sm text-gray-400">
-                    Belum ada santri di kelas ini.<br/>
-                    <span className="text-xs">Paste dari Excel atau klik "+ Tambah baris"</span>
-                  </td>
-                </tr>
+        {/* TAB: Input / Edit Nama */}
+        {tab === 'input' && (
+          <>
+            {/* Zona paste */}
+            <div
+              tabIndex={0}
+              onFocus={() => setPasteActive(true)}
+              onBlur={() => setPasteActive(false)}
+              onPaste={e => { e.preventDefault(); parsePasteText(e.clipboardData.getData('text')) }}
+              className={`mb-4 p-3 border rounded-lg transition-all cursor-pointer outline-none select-none
+                ${pasteActive
+                  ? 'border-emerald-400 bg-emerald-50 ring-2 ring-emerald-200'
+                  : 'border-dashed border-gray-300 bg-gray-50 hover:border-emerald-300 hover:bg-emerald-50'}`}>
+              <p className={`text-xs text-center ${pasteActive ? 'text-emerald-700 font-medium' : 'text-gray-500'}`}>
+                {pasteActive
+                  ? '✅ Siap! Tekan Ctrl+V sekarang'
+                  : <>📋 Klik di sini → tekan <kbd className="bg-white border border-gray-200 rounded px-1 font-mono">Ctrl+V</kbd> untuk paste dari Excel</>}
+              </p>
+              {!pasteActive && (
+                <p className="text-xs text-center text-gray-400 mt-1">
+                  Format: kolom A = No Urut, kolom B = Nama Santri
+                </p>
               )}
-            </tbody>
-          </table>
-        </div>
+            </div>
 
-        <div className="mt-3 pt-3 border-t border-gray-50 flex items-center justify-between">
-          <span className="text-xs text-gray-400">
-            {draft.filter(r => r.nama.trim()).length} santri
-            {editMode && <span className="text-amber-500 ml-2 font-medium">· Belum disimpan</span>}
-          </span>
-          <button onClick={addRow} className="text-xs text-emerald-600 hover:underline">+ Tambah baris</button>
-        </div>
+            {/* Tabel input */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="pb-2 text-left text-xs font-medium text-gray-400 w-20">No</th>
+                    <th className="pb-2 text-left text-xs font-medium text-gray-400">Nama Santri</th>
+                    <th className="pb-2 text-left text-xs font-medium text-gray-400 hidden sm:table-cell">Keterangan</th>
+                    <th className="pb-2 w-8"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {draft.map((row, i) => (
+                    <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 group">
+                      <td className="py-1 pr-2">
+                        <input type="number" min={1} className="input text-center w-16 py-1 text-sm"
+                          value={row.no_urut}
+                          onChange={e => updateDraft(i, 'no_urut', parseInt(e.target.value) || 1)} />
+                      </td>
+                      <td className="py-1 pr-2">
+                        <input className="input py-1 text-sm" placeholder="Nama santri..."
+                          value={row.nama}
+                          onChange={e => updateDraft(i, 'nama', e.target.value)} />
+                      </td>
+                      <td className="py-1 pr-2 hidden sm:table-cell">
+                        <input className="input py-1 text-sm text-gray-500" placeholder="—"
+                          value={row.keterangan}
+                          onChange={e => updateDraft(i, 'keterangan', e.target.value)} />
+                      </td>
+                      <td className="py-1 text-center">
+                        <button onClick={() => removeRow(i)}
+                          className="w-6 h-6 rounded text-red-300 hover:text-red-500 hover:bg-red-50
+                                     opacity-0 group-hover:opacity-100 transition-all text-xl leading-none">
+                          ×
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {draft.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="py-10 text-center text-sm text-gray-400">
+                        Belum ada santri.<br/>
+                        <span className="text-xs">Paste dari Excel atau klik "+ Tambah baris"</span>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-3 pt-3 border-t border-gray-50 flex items-center justify-between">
+              <span className="text-xs text-gray-400">
+                {draft.filter(r => r.nama.trim()).length} santri
+                {editMode && <span className="text-amber-500 ml-2 font-medium">· Belum disimpan</span>}
+              </span>
+              <button onClick={addRow} className="text-xs text-emerald-600 hover:underline">+ Tambah baris</button>
+            </div>
+          </>
+        )}
+
+        {/* TAB: Pindah Kelas */}
+        {tab === 'daftar' && (
+          <div>
+            <p className="text-xs text-gray-500 mb-4">
+              Tap tombol <strong>Pindah</strong> untuk memindahkan santri ke kelas lain.
+              Data prestasi tidak akan terhapus.
+            </p>
+            <div className="divide-y divide-gray-50">
+              {santriList.length === 0 && (
+                <p className="py-8 text-center text-sm text-gray-400">Belum ada santri di kelas ini</p>
+              )}
+              {santriList.map(s => (
+                <div key={s.id} className="flex items-center gap-3 py-2.5">
+                  <span className="w-7 h-7 rounded-full bg-purple-50 text-purple-600 text-xs
+                                   font-semibold flex items-center justify-center flex-shrink-0">
+                    {s.no_urut}
+                  </span>
+                  <span className="text-sm text-gray-800 flex-1">{s.nama}</span>
+                  {s.keterangan && (
+                    <span className="text-xs text-gray-400 hidden sm:inline">{s.keterangan}</span>
+                  )}
+                  <button onClick={() => setModalSantri(s)}
+                    className="btn text-xs py-1 text-purple-600 border-purple-200 hover:bg-purple-50 flex-shrink-0">
+                    🔄 Pindah
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
