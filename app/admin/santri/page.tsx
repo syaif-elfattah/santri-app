@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from 'react'
 
 type Kelas    = { id: string; nama: string }
 type Santri   = { id: string; nama: string; no_urut: number; keterangan: string; kelas_id: string }
-type RowDraft = { no_urut: number; nama: string; keterangan: string }
+type RowDraft = { id?: string; no_urut: number; nama: string; keterangan: string }
 
 // ── Modal Pindah Kelas ────────────────────────────────────────
 function ModalPindahKelas({
@@ -188,7 +188,7 @@ export default function SantriPage() {
     const r = await fetch(`/api/santri?kelas_id=${k.id}`)
     const data: Santri[] = await r.json()
     setSantriList(data)
-    setDraft(data.map(s => ({ no_urut: s.no_urut, nama: s.nama, keterangan: s.keterangan })))
+    setDraft(data.map(s => ({ id: s.id, no_urut: s.no_urut, nama: s.nama, keterangan: s.keterangan })))
   }
 
   const hapusSantri = async (s: Santri) => {
@@ -222,7 +222,9 @@ export default function SantriPage() {
     if (!activeKelas) return
     setSaving(true)
     try {
-      const bulk = draft.filter(r => r.nama.trim())
+      const bulk = draft
+        .filter(r => r.nama.trim())
+        .map(r => ({ id: r.id, no_urut: r.no_urut, nama: r.nama, keterangan: r.keterangan }))
       const res = await fetch('/api/santri', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
