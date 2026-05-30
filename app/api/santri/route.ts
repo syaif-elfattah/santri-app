@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase, supabaseAdmin } from '@/lib/supabase'
 import { isAdminFromRequest } from '@/lib/auth'
 
-// GET /api/santri?kelas_id=xxx — cache 30 detik
 export async function GET(req: NextRequest) {
   const kelas_id = req.nextUrl.searchParams.get('kelas_id')
 
@@ -18,9 +17,7 @@ export async function GET(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   return NextResponse.json(data, {
-    headers: {
-      'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120',
-    },
+    headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120' },
   })
 }
 
@@ -31,7 +28,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json()
   const db = supabaseAdmin()
 
-  // Bulk insert
+  // Bulk insert — pakai INSERT biasa bukan upsert agar tidak menimpa data
   if (body.bulk && Array.isArray(body.bulk)) {
     const rows = body.bulk
       .filter((r: any) => r.nama?.trim())
@@ -45,13 +42,31 @@ export async function POST(req: NextRequest) {
     if (!rows.length)
       return NextResponse.json({ error: 'Tidak ada data valid' }, { status: 400 })
 
-    const { data, error } = await db
-      .from('santri')
-      .upsert(rows, { onConflict: 'kelas_id,no_urut' })
-      .select()
+    // Untuk setiap row: update jika sudah ada (by id jika ada), insert jika belum
+    // Simpan berdasarkan id yang dikirim (untuk edit), atau insert baru
+    const toInsert = rows.filter((r: any) => !r.id)
+    const toUpdate = rows.filter((r: any) => r.id)
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ inserted: data?.length, data }, { status: 201 })
+    let inserted = 0
+    let errors: string[] = []
+
+    // Update yang sudah ada (by id)
+    for (const r of toUpdate) {
+      const { error } = await db.from('santri')
+        .update({ nama: r.nama, no_urut: r.no_urut, keterangan: r.keterangan })
+        .eq('id', r.id)
+      if (error) errors.push(error.message)
+    }
+
+    // Insert yang baru
+    if (toInsert.length > 0) {
+      const { data, error } = await db.from('santri').insert(toInsert).select()
+      if (error) errors.push(error.message)
+      else inserted = data?.length || 0
+    }
+
+    if (errors.length) return NextResponse.json({ error: errors.join(', ') }, { status: 500 })
+    return NextResponse.json({ inserted: inserted + toUpdate.length }, { status: 201 })
   }
 
   // Single insert
@@ -61,8 +76,7 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await db
     .from('santri')
-    .upsert({ kelas_id, nama: nama.trim(), no_urut, keterangan: keterangan || '' },
-             { onConflict: 'kelas_id,no_urut' })
+    .insert({ kelas_id, nama: nama.trim(), no_urut, keterangan: keterangan || '' })
     .select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -94,6 +108,7 @@ export async function DELETE(req: NextRequest) {
   const id = req.nextUrl.searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'ID wajib diisi' }, { status: 400 })
 
+  // Soft delete
   const { error } = await supabaseAdmin()
     .from('santri').update({ aktif: false }).eq('id', id)
 
