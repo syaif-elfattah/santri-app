@@ -25,17 +25,29 @@ function ModalPindahKelas({
   const pindah = async () => {
     if (!targetKelasId) { setError('Pilih kelas tujuan'); return }
     setSaving(true)
-    const res = await fetch(`/api/santri?id=${santri.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ kelas_id: targetKelasId })
-    })
-    if (res.ok) {
-      onSaved()
-      onClose()
-    } else {
-      const d = await res.json()
-      setError(d.error || 'Gagal memindahkan')
+    try {
+      // Ambil daftar santri di kelas tujuan untuk cari no_urut berikutnya
+      const r = await fetch(`/api/santri?kelas_id=${targetKelasId}`)
+      const existing = await r.json()
+      const maxNo = existing.length > 0
+        ? Math.max(...existing.map((s: any) => s.no_urut))
+        : 0
+      const nextNo = maxNo + 1
+
+      const res = await fetch(`/api/santri?id=${santri.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kelas_id: targetKelasId, no_urut: nextNo })
+      })
+      if (res.ok) {
+        onSaved()
+        onClose()
+      } else {
+        const d = await res.json()
+        setError(d.error || 'Gagal memindahkan')
+      }
+    } catch {
+      setError('Terjadi kesalahan. Coba lagi.')
     }
     setSaving(false)
   }
@@ -55,10 +67,10 @@ function ModalPindahKelas({
           {kelasTujuan.length === 0 ? (
             <p className="text-sm text-gray-400 italic">Tidak ada kelas lain yang tersedia</p>
           ) : (
-            <div className="grid grid-cols-2 gap-2 mt-1">
+            <div className="grid grid-cols-3 gap-1.5 mt-1 max-h-48 overflow-y-auto pr-1">
               {kelasTujuan.map(k => (
                 <button key={k.id} onClick={() => setTargetKelasId(k.id)}
-                  className={`py-2 px-3 rounded-lg text-sm font-medium border transition-colors text-left
+                  className={`py-1.5 px-2 rounded-lg text-xs font-medium border transition-colors text-center
                     ${targetKelasId === k.id
                       ? 'bg-emerald-600 text-white border-emerald-700'
                       : 'bg-white border-gray-200 text-gray-600 hover:border-emerald-300'}`}>
