@@ -448,16 +448,34 @@ function InputTab({ kelas }: { kelas: Kelas }) {
   const [saved, setSaved]             = useState(false)
   const [error, setError]             = useState('')
   const [tahunAjaranId, setTahunAjaranId] = useState<string|null>(null)
+  const [existingId, setExistingId]   = useState<string|null>(null) // id entri existing
 
   useEffect(()=>{
     fetch(`/api/santri?kelas_id=${kelas.id}`).then(r=>r.json()).then(setSantriList)
-    // Ambil tahun ajaran aktif
     fetch('/api/tahun-ajaran?aktif=1').then(r=>r.json()).then((d:any[])=>{
       if(d && d.length > 0) setTahunAjaranId(d[0].id)
     })
   },[kelas.id])
 
-  const selectSantri=(s:Santri)=>{ setSelected(s); setForm(emptyForm()); setTagsSek([]); setTagsPon([]); setTagsProgres([]); setSaved(false); setError('') }
+  const selectSantri=async(s:Santri)=>{
+    setSelected(s); setForm(emptyForm()); setTagsSek([]); setTagsPon([]); setTagsProgres([]); setSaved(false); setError(''); setExistingId(null)
+    // Cek apakah sudah ada entri di TA aktif
+    if(tahunAjaranId) {
+      const r = await fetch(`/api/prestasi?santri_id=${s.id}&tahun_ajaran_id=${tahunAjaranId}`)
+      const list = await r.json()
+      if(list && list.length > 0) {
+        const existing = list[0] // ambil entri terbaru
+        setExistingId(existing.id)
+        setForm({
+          kegiatan_sekolah:     existing.kegiatan_sekolah     || '',
+          kegiatan_pondok:      existing.kegiatan_pondok       || '',
+          prestasi_tahfidz:     existing.prestasi_tahfidz      || [],
+          prestasi_non_tahfidz: existing.prestasi_non_tahfidz  || [],
+          progres_pribadi:      existing.progres_pribadi        || '',
+        })
+      }
+    }
+  }
   const toggleSek=(t:string)=>setTagsSek(p=>p.includes(t)?p.filter(x=>x!==t):[...p,t])
   const togglePon=(t:string)=>setTagsPon(p=>p.includes(t)?p.filter(x=>x!==t):[...p,t])
   const toggleProgres=(t:string)=>setTagsProgres(p=>p.includes(t)?p.filter(x=>x!==t):[...p,t])
@@ -467,18 +485,31 @@ function InputTab({ kelas }: { kelas: Kelas }) {
     setSaving(true); setError('')
     try {
       const progresAll=[...tagsProgres.map(t=>`• ${t}`),...addBullets(form.progres_pribadi).split('\n').filter(Boolean)].join('\n')
-      const res=await fetch('/api/prestasi',{
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({
-          santri_id:            selectedSantri.id,
-          tahun_ajaran_id:      tahunAjaranId,
-          kegiatan_sekolah:     buildField(tagsSek, form.kegiatan_sekolah),
-          kegiatan_pondok:      buildField(tagsPon, form.kegiatan_pondok),
-          prestasi_tahfidz:     form.prestasi_tahfidz,
-          prestasi_non_tahfidz: form.prestasi_non_tahfidz,
-          progres_pribadi:      progresAll,
+      const payload = {
+        kegiatan_sekolah:     buildField(tagsSek, form.kegiatan_sekolah),
+        kegiatan_pondok:      buildField(tagsPon, form.kegiatan_pondok),
+        prestasi_tahfidz:     form.prestasi_tahfidz,
+        prestasi_non_tahfidz: form.prestasi_non_tahfidz,
+        progres_pribadi:      progresAll,
+      }
+      let res
+      if(existingId) {
+        // Update entri yang sudah ada (Opsi A: 1 entri per TA)
+        res = await fetch(`/api/prestasi?id=${existingId}`, {
+          method:'PATCH', headers:{'Content-Type':'application/json'},
+          body:JSON.stringify(payload)
         })
-      })
+      } else {
+        // Buat entri baru
+        res = await fetch('/api/prestasi',{
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            santri_id:       selectedSantri.id,
+            tahun_ajaran_id: tahunAjaranId,
+            ...payload
+          })
+        })
+      }
       if(!res.ok) throw new Error((await res.json()).error)
       setSaved(true)
     } catch(e:any){ setError(e.message) }
@@ -516,7 +547,14 @@ function InputTab({ kelas }: { kelas: Kelas }) {
       {/* Header santri */}
       <div className="flex items-center gap-4 p-4 bg-emerald-600 rounded-2xl text-white shadow-lg shadow-emerald-900/10">
         <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-lg font-bold flex-shrink-0">{selectedSantri.nama.charAt(0)}</div>
-        <div className="flex-1"><p className="font-bold leading-tight">{selectedSantri.nama}</p><p className="text-xs text-emerald-100 opacity-80">{kelas.nama} · Nomor Urut {selectedSantri.no_urut}</p></div>
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <p className="font-bold leading-tight">{selectedSantri.nama}</p>
+            {existingId && <span className="text-xs bg-amber-400 text-amber-900 px-2 py-0.5 rounded-full font-semibold">Edit</span>}
+          </div>
+          <p className="text-xs text-emerald-100 opacity-80">{kelas.nama} · Nomor Urut {selectedSantri.no_urut}</p>
+          {existingId && <p className="text-xs text-emerald-200 mt-0.5">✏️ Data sudah ada — perbarui sesuai kebutuhan</p>}
+        </div>
         <button onClick={()=>setSelected(null)} className="text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors">Ganti</button>
       </div>
 
@@ -569,7 +607,7 @@ function InputTab({ kelas }: { kelas: Kelas }) {
       {error&&<div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-600">{error}</div>}
       <div className="flex gap-3 pb-10">
         <button onClick={handleSave} disabled={saving} className="flex-1 bg-emerald-600 text-white py-3 rounded-2xl font-bold shadow-lg shadow-emerald-200 hover:bg-emerald-700 disabled:opacity-50 transition-all">
-          {saving?'Menyimpan...':'Simpan Data'}
+          {saving ? 'Menyimpan...' : existingId ? 'Perbarui Data' : 'Simpan Data'}
         </button>
         <button onClick={()=>setSelected(null)} className="px-6 bg-white border border-gray-200 text-gray-500 py-3 rounded-2xl font-bold hover:bg-gray-50 transition-all">Batal</button>
       </div>
