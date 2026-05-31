@@ -4,12 +4,13 @@ import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 
 const NAV = [
-  { href: '/admin/dashboard',          label: 'Dashboard',        icon: '📊' },
-  { href: '/admin/kelas',              label: 'Kelas',            icon: '🏫' },
-  { href: '/admin/santri',             label: 'Data Santri',      icon: '👥' },
-  { href: '/admin/prestasi',           label: 'Prestasi',         icon: '🏆' },
-  { href: '/admin/tahun-ajaran',       label: 'Tahun Ajaran',     icon: '📅' },
-  { href: '/admin/achievement-config', label: 'Desain Achievement',icon: '🎨' },
+  { href: '/admin/dashboard',          label: 'Dashboard',         icon: '📊' },
+  { href: '/admin/kelas',              label: 'Kelas',             icon: '🏫' },
+  { href: '/admin/musyrif',            label: 'Musyrif',           icon: '👤' },
+  { href: '/admin/santri',             label: 'Data Santri',       icon: '👥' },
+  { href: '/admin/prestasi',           label: 'Prestasi',          icon: '🏆' },
+  { href: '/admin/tahun-ajaran',       label: 'Tahun Ajaran',      icon: '📅' },
+  { href: '/admin/achievement-config', label: 'Desain Achievement', icon: '🎨' },
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
