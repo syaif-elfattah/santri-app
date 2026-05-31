@@ -55,6 +55,7 @@ export default function DashboardPage() {
   const [loading, setLoading]   = useState(true)
   const [waModal, setWaModal]   = useState<MonitorKelas | null>(null)
   const [expandBelum, setExpandBelum] = useState<string | null>(null)
+  const [salinMsg, setSalinMsg]         = useState('')
 
   useEffect(() => {
     Promise.all([
@@ -90,6 +91,61 @@ export default function DashboardPage() {
     sebagian: '🟡 Sebagian',
     kosong:   '🔴 Belum ada',
   }[s] || '—')
+
+  const statusEmoji = (s: string) => ({ lengkap:'🟢', sebagian:'🟡', kosong:'🔴' }[s] || '⚪')
+
+  const salinRekap = () => {
+    const tgl = new Date().toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric' })
+    const lengkap  = monitor.filter(m => m.status === 'lengkap').length
+    const sebagian = monitor.filter(m => m.status === 'sebagian').length
+    const kosong   = monitor.filter(m => m.status === 'kosong').length
+    const totalSantriAll = monitor.reduce((a,m) => a+m.total, 0)
+    const totalSudah     = monitor.reduce((a,m) => a+m.sudah, 0)
+
+    const lines = [
+      '📊 REKAP PENGISIAN E-PRESTASI SANTRI',
+      `Tahun Ajaran ${taAktif?.nama || '2025/2026'} • ${tgl}`,
+      '',
+      `✅ Lengkap   : ${lengkap} kelas`,
+      `🟡 Sebagian  : ${sebagian} kelas`,
+      `🔴 Belum ada : ${kosong} kelas`,
+      `📈 Total     : ${totalSudah}/${totalSantriAll} santri terisi`,
+      '',
+      '─'.repeat(30),
+      'DETAIL PER KELAS:',
+      '',
+      ...monitor.map(m => {
+        const musyrifNama = m.musyrif.length > 0
+          ? m.musyrif.map(mu => mu.nama).join(' & ')
+          : '(belum ada musyrif)'
+        return [
+          `${statusEmoji(m.status)} ${m.kelas_nama} — ${m.sudah}/${m.total} santri`,
+          `   👤 ${musyrifNama}`,
+        ].join('\n')
+      }),
+      '',
+      '─'.repeat(30),
+      '📱 E-Prestasi Santri — PP Ma\'ahid Kudus',
+      'santri-app-eta.vercel.app',
+    ]
+
+    navigator.clipboard.writeText(lines.join('\n'))
+      .then(() => {
+        setSalinMsg('✓ Rekap berhasil disalin!')
+        setTimeout(() => setSalinMsg(''), 3000)
+      })
+      .catch(() => {
+        // Fallback untuk browser yang tidak support clipboard API
+        const el = document.createElement('textarea')
+        el.value = lines.join('\n')
+        document.body.appendChild(el)
+        el.select()
+        document.execCommand('copy')
+        document.body.removeChild(el)
+        setSalinMsg('✓ Rekap berhasil disalin!')
+        setTimeout(() => setSalinMsg(''), 3000)
+      })
+  }
 
   return (
     <div>
@@ -140,7 +196,14 @@ export default function DashboardPage() {
         <div className="card p-0 overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
             <span className="text-sm font-medium">Status Pengisian per Kelas</span>
-            <span className="text-xs text-gray-400">{monitor.length} kelas</span>
+            <div className="flex items-center gap-3">
+              {salinMsg && <span className="text-xs text-emerald-600 font-medium">{salinMsg}</span>}
+              <span className="text-xs text-gray-400">{monitor.length} kelas</span>
+              <button onClick={salinRekap}
+                className="btn text-xs py-1 text-purple-600 border-purple-200 hover:bg-purple-50">
+                📋 Salin Rekap
+              </button>
+            </div>
           </div>
           {loading && <div className="py-12 text-center text-gray-400 text-sm">Memuat...</div>}
           <div className="divide-y divide-gray-50">
