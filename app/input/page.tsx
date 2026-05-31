@@ -451,6 +451,11 @@ function InputTab({ kelas }: { kelas: Kelas }) {
   const [existingId, setExistingId]   = useState<string|null>(null) // id entri existing
 
   useEffect(()=>{
+    // Reset saat kelas berubah
+    setSelected(null)
+    setSaved(false)
+    setError('')
+    setExistingId(null)
     fetch(`/api/santri?kelas_id=${kelas.id}`).then(r=>r.json()).then(setSantriList)
     fetch('/api/tahun-ajaran?aktif=1').then(r=>r.json()).then((d:any[])=>{
       if(d && d.length > 0) setTahunAjaranId(d[0].id)
@@ -621,6 +626,11 @@ export default function InputPage() {
   const [activeKelas, setActiveKelas] = useState<Kelas|null>(null)
   const [activeTab, setActiveTab]     = useState<'input'|'rekap'>('input')
 
+  const gantiKelas = (k: Kelas) => {
+    setActiveKelas(k)
+    setActiveTab('input') // reset ke tab input
+  }
+
   useEffect(()=>{ fetch('/api/kelas').then(r=>r.json()).then((k:Kelas[])=>{ setKelasList(k); if(k.length) setActiveKelas(k[0]) }) },[])
 
   return (
@@ -637,7 +647,7 @@ export default function InputPage() {
           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 ml-1">Pilih Kelas Anda</p>
           <div className="flex gap-2 overflow-x-auto pb-2">
             {kelasList.map(k=>(
-              <button key={k.id} onClick={()=>setActiveKelas(k)}
+              <button key={k.id} onClick={()=>gantiKelas(k)}
                 className={`px-5 py-2.5 rounded-xl text-sm font-bold border whitespace-nowrap transition-all
                   ${activeKelas?.id===k.id?'bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-100':'bg-white border-gray-200 text-gray-500 hover:border-emerald-300'}`}>
                 {k.nama}
