@@ -88,13 +88,13 @@ function SizeRow({ label, sizeKey, boldKey, cfg, set, min=6, max=40 }: {
   return (
     <div className="flex items-center gap-3">
       <span className="text-xs text-gray-600 w-40 flex-shrink-0">{label}</span>
-      <input type="range" min={min} max={max} step={0.5}
+      <input type="range" min={min} max={max} step={1}
         value={cfg[sizeKey] as number}
-        onChange={e => set(sizeKey, parseFloat(e.target.value))}
+        onChange={e => set(sizeKey, parseInt(e.target.value))}
         className="flex-1 accent-emerald-600"/>
-      <input type="number" min={min} max={max} step={0.5}
+      <input type="number" min={min} max={max} step={1}
         value={cfg[sizeKey] as number}
-        onChange={e => set(sizeKey, parseFloat(e.target.value)||min)}
+        onChange={e => set(sizeKey, parseInt(e.target.value)||min)}
         className="input w-14 text-center text-xs py-1"/>
       <span className="text-xs text-gray-400 w-4">pt</span>
       {boldKey && (
@@ -136,13 +136,36 @@ export default function AchievementConfigPage() {
 
   const save = async () => {
     setSaving(true)
-    const res = await fetch('/api/achievement-config', {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(cfg)
-    })
-    setMsg(res.ok ? '✓ Tersimpan' : 'Error menyimpan')
+    try {
+      // Sanitasi: pastikan semua ukuran adalah integer (bukan float)
+      const ukuranKeys = [
+        'ukuran_logo','ukuran_judul','ukuran_inst','ukuran_subjudul','ukuran_label',
+        'ukuran_nama','ukuran_kelas','ukuran_hdr_kolom','ukuran_sub_kolom','ukuran_isi',
+        'ukuran_total_label','ukuran_total_num','ukuran_motivasi_title','ukuran_motivasi',
+        'ukuran_ayat','ukuran_tanggal'
+      ]
+      const sanitized = { ...cfg }
+      ukuranKeys.forEach(k => {
+        (sanitized as any)[k] = Math.round(Number((sanitized as any)[k]) || 0)
+      })
+      const res = await fetch('/api/achievement-config', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(sanitized)
+      })
+      if (res.ok) {
+        setMsg('✓ Tersimpan')
+      } else if (res.status === 401) {
+        setMsg('Session habis — silakan login ulang')
+        setTimeout(() => { window.location.href = '/admin' }, 2000)
+      } else {
+        const d = await res.json().catch(() => ({}))
+        setMsg('Error: ' + (d.error || res.statusText || 'Gagal menyimpan'))
+      }
+    } catch {
+      setMsg('Error: Tidak bisa terhubung ke server')
+    }
     setSaving(false)
-    setTimeout(() => setMsg(''), 3000)
+    setTimeout(() => setMsg(''), 4000)
   }
 
   if (loading) return <div className="py-16 text-center text-gray-400">Memuat...</div>
