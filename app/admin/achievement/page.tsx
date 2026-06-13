@@ -351,7 +351,7 @@ function buildCardHTML(item: SantriItem, motivasi: string, tanggal: string, tahu
         <div style="display:flex;gap:10mm;justify-content:flex-end">
           ${musyrifKelas.map(m => `
             <div style="text-align:center;min-width:28mm">
-              <div style="font-size:6pt;color:#6b7280;margin-bottom:7mm">Musyrif/Musyrifah,</div>
+              <div style="font-size:6pt;color:#6b7280;margin-bottom:12mm">Musyrif/Musyrifah,</div>
               <div style="border-top:1px solid #374151;padding-top:1mm;font-size:6.5pt;font-weight:600;color:#374151">${m.nama}</div>
             </div>
           `).join('')}
