@@ -129,6 +129,7 @@ export default function SantriPage() {
   const [draft, setDraft]             = useState<RowDraft[]>([])
   const [editMode, setEditMode]       = useState(false)
   const [saving, setSaving]           = useState(false)
+  const [loadingKelas, setLoadingKelas] = useState(false)
   const [msg, setMsg]                 = useState('')
   const [pasteActive, setPasteActive] = useState(false)
   const [modalSantri, setModalSantri] = useState<Santri | null>(null)
@@ -185,10 +186,14 @@ export default function SantriPage() {
   const selectKelas = async (k: Kelas) => {
     setActiveKelas(k)
     setEditMode(false)
+    setLoadingKelas(true)
+    setSantriList([])
+    setDraft([])
     const r = await fetch(`/api/santri?kelas_id=${k.id}`)
     const data: Santri[] = await r.json()
     setSantriList(data)
     setDraft(data.map(s => ({ id: s.id, no_urut: s.no_urut, nama: s.nama, keterangan: s.keterangan })))
+    setLoadingKelas(false)
   }
 
   const hapusSantri = async (s: Santri) => {
@@ -424,7 +429,20 @@ export default function SantriPage() {
                       </td>
                     </tr>
                   ))}
-                  {draft.length === 0 && (
+                  {loadingKelas && (
+                    <tr>
+                      <td colSpan={4} className="py-8 text-center">
+                        <div className="flex items-center justify-center gap-2 text-gray-400">
+                          <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                          </svg>
+                          <span className="text-sm">Memuat data santri...</span>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  {!loadingKelas && draft.length === 0 && (
                     <tr>
                       <td colSpan={4} className="py-10 text-center text-sm text-gray-400">
                         Belum ada santri.<br/>
@@ -458,7 +476,16 @@ export default function SantriPage() {
               </button>
             </div>
             <div className="divide-y divide-gray-50">
-              {santriList.length === 0 && (
+              {loadingKelas && (
+                <div className="py-8 text-center flex items-center justify-center gap-2 text-gray-400">
+                  <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                  </svg>
+                  <span className="text-sm">Memuat...</span>
+                </div>
+              )}
+              {!loadingKelas && santriList.length === 0 && (
                 <p className="py-8 text-center text-sm text-gray-400">Belum ada santri di kelas ini</p>
               )}
               {santriList.map(s => (

@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   if (kelas_id) q = q.eq('kelas_id', kelas_id)
   const { data, error } = await q
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+  return NextResponse.json(data, { headers: { "Cache-Control": "no-store" } })
 }
 
 // POST — assign musyrif ke kelas

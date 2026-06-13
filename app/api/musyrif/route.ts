@@ -7,7 +7,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from('musyrif').select('*').eq('aktif', true).order('nama')
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+  return NextResponse.json(data, { headers: { "Cache-Control": "no-store" } })
 }
 
 // POST — tambah musyrif baru
@@ -35,7 +35,7 @@ export async function PATCH(req: NextRequest) {
     .from('musyrif').update({ nama: nama?.trim(), no_hp: no_hp?.trim() || '' })
     .eq('id', id).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+  return NextResponse.json(data, { headers: { "Cache-Control": "no-store" } })
 }
 
 // DELETE — soft delete musyrif

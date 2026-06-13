@@ -143,7 +143,7 @@ function kapitalisasiBulan(str: string): string {
 }
 
 // ─── Build HTML satu halaman achievement ─────────────────────
-function buildCardHTML(item: SantriItem, motivasi: string, tanggal: string, tahunAjaran: string, cfg: AchConfig): string {
+function buildCardHTML(item: SantriItem, motivasi: string, tanggal: string, tahunAjaran: string, cfg: AchConfig, musyrifKelas: {nama: string}[]): string {
   const { santri, prestasi } = item
 
   // ── Format nama santri → Title Case ──
@@ -337,7 +337,19 @@ function buildCardHTML(item: SantriItem, motivasi: string, tanggal: string, tahu
         "${cfg.teks_ayat}"
         <span class="ayat-ref">${cfg.referensi_ayat}</span>
       </div>
-      <div class="tgl">${tanggal}</div>
+      <div style="text-align:right">
+        <div class="tgl" style="margin-bottom:8mm">${tanggal}</div>
+        ${musyrifKelas.length > 0 ? `
+        <div style="display:flex;gap:10mm;justify-content:flex-end">
+          ${musyrifKelas.map(m => `
+            <div style="text-align:center;min-width:28mm">
+              <div style="font-size:6pt;color:#6b7280;margin-bottom:7mm">Musyrif/Musyrifah,</div>
+              <div style="border-top:1px solid #374151;padding-top:1mm;font-size:6.5pt;font-weight:600;color:#374151">${m.nama}</div>
+            </div>
+          `).join('')}
+        </div>
+        ` : ''}
+      </div>
     </div>
   </div>
 </div>
@@ -346,10 +358,10 @@ function buildCardHTML(item: SantriItem, motivasi: string, tanggal: string, tahu
 }
 
 // ─── Preview via iframe ───────────────────────────────────────
-function PreviewCard({ item, motivasi, tanggal, tahunAjaran, cfg }: {
-  item: SantriItem; motivasi: string; tanggal: string; tahunAjaran: string; cfg: AchConfig
+function PreviewCard({ item, motivasi, tanggal, tahunAjaran, cfg, musyrifKelas }: {
+  item: SantriItem; motivasi: string; tanggal: string; tahunAjaran: string; cfg: AchConfig; musyrifKelas: {nama: string}[]
 }) {
-  const html = buildCardHTML(item, motivasi, tanggal, tahunAjaran, cfg)
+  const html = buildCardHTML(item, motivasi, tanggal, tahunAjaran, cfg, musyrifKelas)
   if (!html) return (
     <div style={{width:'210mm',minHeight:'60mm',display:'flex',alignItems:'center',justifyContent:'center',
       border:'1px dashed #d1d5db',borderRadius:8,color:'#9ca3af',fontSize:13,fontStyle:'italic'}}>
@@ -363,9 +375,9 @@ function PreviewCard({ item, motivasi, tanggal, tahunAjaran, cfg }: {
 }
 
 // ─── Print semua ke 1 window bersih ──────────────────────────
-function doCetak(data: SantriItem[], tanggal: string, kelasNama: string, tahunAjaran: string, cfg: AchConfig) {
+function doCetak(data: SantriItem[], tanggal: string, kelasNama: string, tahunAjaran: string, cfg: AchConfig, musyrifKelas: {nama: string}[]) {
   const pages = data
-    .map((item, i) => buildCardHTML(item, [cfg.teks_motivasi_1, cfg.teks_motivasi_2, cfg.teks_motivasi_3][i % 3], tanggal, tahunAjaran, cfg))
+    .map((item, i) => buildCardHTML(item, [cfg.teks_motivasi_1, cfg.teks_motivasi_2, cfg.teks_motivasi_3][i % 3], tanggal, tahunAjaran, cfg, musyrifKelas))
     .filter(Boolean)
 
   if (!pages.length) { alert('Tidak ada data untuk dicetak'); return }
@@ -418,6 +430,7 @@ export default function AchievementPage() {
   const [data,          setData]          = useState<SantriItem[]>([])
   const [loading,       setLoading]       = useState(false)
   const [cfg,           setCfg]           = useState<AchConfig>(DEFAULT_CFG)
+  const [musyrifKelas,  setMusyrifKelas]  = useState<{nama: string}[]>([])
   const tanggal = todayKudus()
 
   // Load kelas + TA + config
@@ -434,14 +447,20 @@ export default function AchievementPage() {
     })
   }, [])
 
-  // Load data santri + prestasi
+  // Load data santri + prestasi + musyrif kelas
   useEffect(() => {
     if (!activeKelasId) return
     setLoading(true)
     const taParam = activeTaId ? `&tahun_ajaran_id=${activeTaId}` : ''
-    fetch(`/api/prestasi/achievement?kelas_id=${activeKelasId}${taParam}`)
-      .then(r => r.json())
-      .then(d => { setData(d); setLoading(false) })
+    Promise.all([
+      fetch(`/api/prestasi/achievement?kelas_id=${activeKelasId}${taParam}`).then(r => r.json()),
+      fetch(`/api/kelas-musyrif?kelas_id=${activeKelasId}`).then(r => r.json()),
+    ]).then(([d, km]) => {
+      setData(d)
+      const mk = (km || []).map((x: any) => ({ nama: x.musyrif?.nama || '' })).filter((x: any) => x.nama)
+      setMusyrifKelas(mk)
+      setLoading(false)
+    })
   }, [activeKelasId, activeTaId])
 
   const kelasNama   = kelasList.find(k => k.id === activeKelasId)?.nama || ''
@@ -455,8 +474,8 @@ export default function AchievementPage() {
   })
 
   const handleCetak = useCallback(() => {
-    doCetak(data, tanggal, kelasNama, tahunAjaran, cfg)
-  }, [data, tanggal, kelasNama, tahunAjaran, cfg])
+    doCetak(data, tanggal, kelasNama, tahunAjaran, cfg, musyrifKelas)
+  }, [data, tanggal, kelasNama, tahunAjaran, cfg, musyrifKelas])
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -535,7 +554,7 @@ export default function AchievementPage() {
               </div>
               <div className="shadow-xl rounded-sm overflow-hidden" style={{width:'210mm'}}>
                 <PreviewCard item={item} motivasi={[cfg.teks_motivasi_1, cfg.teks_motivasi_2, cfg.teks_motivasi_3][i % 3]}
-                  tanggal={tanggal} tahunAjaran={tahunAjaran} cfg={cfg}/>
+                  tanggal={tanggal} tahunAjaran={tahunAjaran} cfg={cfg} musyrifKelas={musyrifKelas}/>
               </div>
             </div>
           )

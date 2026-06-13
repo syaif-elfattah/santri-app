@@ -11,6 +11,7 @@ export default function KelasPage() {
   const [km, setKm]               = useState<KelasMusyrif[]>([])
   const [nama, setNama]           = useState('')
   const [loading, setLoading]     = useState(false)
+  const [loadingAssign, setLoadingAssign] = useState<string | null>(null)
   const [msg, setMsg]             = useState('')
   const [expandKelas, setExpandKelas] = useState<string | null>(null)
 
@@ -48,20 +49,23 @@ export default function KelasPage() {
 
   const assignMusyrif = async (kelas_id: string, musyrif_id: string) => {
     if (!musyrif_id) return
-    // Cek sudah di-assign belum
     const sudah = km.find(x => x.kelas_id === kelas_id && x.musyrif_id === musyrif_id)
     if (sudah) { flash('Musyrif ini sudah ditambahkan di kelas ini'); return }
+    setLoadingAssign(kelas_id)
     const res = await fetch('/api/kelas-musyrif', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ kelas_id, musyrif_id })
     })
-    if (res.ok) { flash('✓ Musyrif ditambahkan ke kelas'); load() }
+    if (res.ok) { flash('✓ Musyrif ditambahkan ke kelas'); await load() }
     else { const d = await res.json(); flash('Error: ' + d.error) }
+    setLoadingAssign(null)
   }
 
-  const unassign = async (id: string) => {
+  const unassign = async (id: string, kelas_id: string) => {
+    setLoadingAssign(kelas_id)
     const res = await fetch(`/api/kelas-musyrif?id=${id}`, { method: 'DELETE' })
-    if (res.ok) { flash('✓ Musyrif dilepas dari kelas'); load() }
+    if (res.ok) { flash('✓ Musyrif dilepas dari kelas'); await load() }
+    setLoadingAssign(null)
   }
 
   const musyrifKelas = (kelas_id: string) => km.filter(x => x.kelas_id === kelas_id)
@@ -147,7 +151,7 @@ export default function KelasPage() {
                               {m.musyrif.no_hp && (
                                 <span className="text-xs text-gray-400">· {m.musyrif.no_hp}</span>
                               )}
-                              <button onClick={() => unassign(m.id)}
+                              <button onClick={() => unassign(m.id, k.id)}
                                 className="w-5 h-5 rounded-full bg-red-50 text-red-400 hover:bg-red-100
                                            flex items-center justify-center text-xs ml-1">×</button>
                             </div>
@@ -157,7 +161,15 @@ export default function KelasPage() {
                     )}
 
                     {/* Tambah musyrif */}
-                    {mb.length > 0 ? (
+                    {loadingAssign === k.id ? (
+                      <div className="mt-2 flex items-center gap-2 text-gray-400 text-xs py-1">
+                        <svg className="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                        </svg>
+                        Menyimpan...
+                      </div>
+                    ) : mb.length > 0 ? (
                       <div className="mt-2">
                         <p className="text-xs font-medium text-gray-500 mb-2">Tambah musyrif:</p>
                         <div className="flex flex-wrap gap-1.5">
