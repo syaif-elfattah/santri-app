@@ -198,8 +198,16 @@ function buildCardHTML(item: SantriItem, motivasi: string, tanggal: string, tahu
     `<div class="keg-row"><span style="color:#1e40af;font-weight:700">✦</span> ${k.replace(/^•\s*/,'')}</div>`
   ).join('')
 
-  const progresRows = progres.map(p =>
-    `<div class="prog-row"><span style="color:#7c3aed;font-weight:700">✦</span> ${p.replace(/^•\s*/,'')}</div>`
+  // Batasi progres: maks 26 item pendek (<=50 char), 20 item panjang (>50 char)
+  const progresFiltered = (() => {
+    const items = progres.map(p => p.replace(/^•\s*/,''))
+    const adaPanjang = items.some(p => p.length > 50)
+    const maks = adaPanjang ? 20 : 26
+    return items.slice(0, maks)
+  })()
+
+  const progresRows = progresFiltered.map(p =>
+    `<div class="prog-row"><span style="color:#7c3aed;font-weight:700">✦</span> ${p}</div>`
   ).join('')
 
   return `<!DOCTYPE html>
