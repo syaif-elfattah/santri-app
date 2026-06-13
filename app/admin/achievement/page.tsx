@@ -361,6 +361,31 @@ function buildCardHTML(item: SantriItem, motivasi: string, tanggal: string, tahu
     </div>
   </div>
 </div>
+<script>
+  (function() {
+    var A4_H = 297 * 3.7795;
+    var A4_W = 210 * 3.7795;
+    function doScale() {
+      var page = document.querySelector('.page');
+      if (!page) return;
+      var h = page.scrollHeight;
+      if (h > A4_H) {
+        var s = A4_H / h;
+        page.style.transform = 'scale(' + s + ')';
+        page.style.transformOrigin = 'top left';
+        page.style.width = (A4_W / s) + 'px';
+        page.style.minHeight = (A4_H / s) + 'px';
+        var wrap = page.parentElement;
+        if (wrap) { wrap.style.height = A4_H + 'px'; wrap.style.overflow = 'hidden'; }
+      }
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', doScale);
+    } else {
+      doScale();
+    }
+  })();
+<\/script>
 </body>
 </html>`
 }
@@ -419,7 +444,56 @@ function doCetak(data: SantriItem[], tanggal: string, kelasNama: string, tahunAj
 <body>
 ${bodies.map(b => `<div class="pw">${b}</div>`).join('\n')}
 <script>
-  window.onload = function() { setTimeout(function(){ window.print(); }, 1000) }
+  function autoScale() {
+    var pages = document.querySelectorAll('.page');
+    pages.forEach(function(page) {
+      var A4_HEIGHT = 297 * 3.7795; // 297mm in px (1mm = 3.7795px)
+      var A4_WIDTH  = 210 * 3.7795;
+      var contentH = page.scrollHeight;
+      if (contentH > A4_HEIGHT) {
+        var scale = A4_HEIGHT / contentH;
+        page.style.transform = 'scale(' + scale + ')';
+        page.style.transformOrigin = 'top left';
+        page.style.width = (A4_WIDTH / scale) + 'px';
+        page.style.minHeight = (A4_HEIGHT / scale) + 'px';
+        // Wrapper tetap A4
+        var wrapper = page.parentElement;
+        if (wrapper) {
+          wrapper.style.width = A4_WIDTH + 'px';
+          wrapper.style.height = A4_HEIGHT + 'px';
+          wrapper.style.overflow = 'hidden';
+        }
+      }
+    });
+  }
+  window.onload = function() {
+    autoScale();
+  }
+<\/script>
+<script>
+  (function() {
+    var A4_H = 297 * 3.7795;
+    var A4_W = 210 * 3.7795;
+    function doScale() {
+      var page = document.querySelector('.page');
+      if (!page) return;
+      var h = page.scrollHeight;
+      if (h > A4_H) {
+        var s = A4_H / h;
+        page.style.transform = 'scale(' + s + ')';
+        page.style.transformOrigin = 'top left';
+        page.style.width = (A4_W / s) + 'px';
+        page.style.minHeight = (A4_H / s) + 'px';
+        var wrap = page.parentElement;
+        if (wrap) { wrap.style.height = A4_H + 'px'; wrap.style.overflow = 'hidden'; }
+      }
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', doScale);
+    } else {
+      doScale();
+    }
+  })();
 <\/script>
 </body>
 </html>`)
