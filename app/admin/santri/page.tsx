@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 
 type Kelas    = { id: string; nama: string }
 type Santri   = { id: string; nama: string; no_urut: number; keterangan: string; kelas_id: string }
@@ -26,19 +26,15 @@ function ModalPindahKelas({
     if (!targetKelasId) { setError('Pilih kelas tujuan'); return }
     setSaving(true)
     try {
-      // 1. Ambil santri di kelas tujuan → cari no_urut berikutnya
       const rTujuan = await fetch(`/api/santri?kelas_id=${targetKelasId}`)
       const existingTujuan = await rTujuan.json()
       const maxNo = existingTujuan.length > 0
-        ? Math.max(...existingTujuan.map((s: any) => s.no_urut))
-        : 0
-      const nextNo = maxNo + 1
+        ? Math.max(...existingTujuan.map((s: any) => s.no_urut)) : 0
 
-      // 2. Pindahkan santri ke kelas tujuan dengan no_urut baru
       const res = await fetch(`/api/santri?id=${santri.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kelas_id: targetKelasId, no_urut: nextNo })
+        body: JSON.stringify({ kelas_id: targetKelasId, no_urut: maxNo + 1 })
       })
       if (!res.ok) {
         const d = await res.json()
@@ -47,11 +43,10 @@ function ModalPindahKelas({
         return
       }
 
-      // 3. Renumber santri yang tersisa di kelas asal agar tetap urut
+      // Renumber sisa kelas asal
       const rAsal = await fetch(`/api/santri?kelas_id=${currentKelasId}`)
       const sisaAsal: any[] = await rAsal.json()
-      // Sort by no_urut, lalu assign ulang 1,2,3,...
-      const sorted = [...sisaAsal].sort((a,b) => a.no_urut - b.no_urut)
+      const sorted = [...sisaAsal].sort((a, b) => a.no_urut - b.no_urut)
       await Promise.all(sorted.map((s, idx) =>
         fetch(`/api/santri?id=${s.id}`, {
           method: 'PATCH',
@@ -59,7 +54,6 @@ function ModalPindahKelas({
           body: JSON.stringify({ no_urut: idx + 1 })
         })
       ))
-
       onSaved()
       onClose()
     } catch {
@@ -77,11 +71,10 @@ function ModalPindahKelas({
           <span className="mx-2 text-gray-400">·</span>
           <span className="text-xs bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full">{currentNama}</span>
         </p>
-
         <div className="mb-4">
           <label className="label">Pindah ke kelas</label>
           {kelasTujuan.length === 0 ? (
-            <p className="text-sm text-gray-400 italic">Tidak ada kelas lain yang tersedia</p>
+            <p className="text-sm text-gray-400 italic">Tidak ada kelas lain</p>
           ) : (
             <div className="grid grid-cols-3 gap-1.5 mt-1 max-h-48 overflow-y-auto pr-1">
               {kelasTujuan.map(k => (
@@ -96,19 +89,15 @@ function ModalPindahKelas({
             </div>
           )}
         </div>
-
         {targetKelasId && (
           <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
             <p className="text-xs text-amber-700">
-              ⚠ Semua data prestasi <strong>{santri.nama}</strong> tetap tersimpan.
-              Hanya kelas yang berubah dari <strong>{currentNama}</strong> ke{' '}
+              ⚠ Data prestasi tetap tersimpan. Kelas berubah dari <strong>{currentNama}</strong> ke{' '}
               <strong>{kelasList.find(k => k.id === targetKelasId)?.nama}</strong>.
             </p>
           </div>
         )}
-
         {error && <p className="text-sm text-red-500 mb-3">{error}</p>}
-
         <div className="flex gap-2">
           <button onClick={onClose} className="btn flex-1">Batal</button>
           <button onClick={pindah} disabled={saving || !targetKelasId}
@@ -122,27 +111,70 @@ function ModalPindahKelas({
 }
 
 // ── Halaman Utama ─────────────────────────────────────────────
-export default function SantriPage() {
-  const [kelasList, setKelasList]     = useState<Kelas[]>([])
-  const [activeKelas, setActiveKelas] = useState<Kelas | null>(null)
-  const [santriList, setSantriList]   = useState<Santri[]>([])
-  const [draft, setDraft]             = useState<RowDraft[]>([])
-  const [editMode, setEditMode]       = useState(false)
-  const [saving, setSaving]           = useState(false)
-  const [loadingKelas, setLoadingKelas] = useState(false)
-  const [msg, setMsg]                 = useState('')
-  const [pasteActive, setPasteActive] = useState(false)
-  const [modalSantri, setModalSantri] = useState<Santri | null>(null)
-  const [tab, setTab]                 = useState<'input'|'daftar'>('input')
-  const [rapikan, setRapikan]         = useState(false)
+const STORAGE_KEY = 'santri_active_kelas_id'
 
+export default function SantriPage() {
+  const [kelasList, setKelasList]       = useState<Kelas[]>([])
+  const [activeKelas, setActiveKelas]   = useState<Kelas | null>(null)
+  const [santriList, setSantriList]     = useState<Santri[]>([])
+  const [draft, setDraft]               = useState<RowDraft[]>([])
+  const [editMode, setEditMode]         = useState(false)
+  const [saving, setSaving]             = useState(false)
+  const [loadingKelas, setLoadingKelas] = useState(false)
+  const [msg, setMsg]                   = useState('')
+  const [pasteActive, setPasteActive]   = useState(false)
+  const [modalSantri, setModalSantri]   = useState<Santri | null>(null)
+  const [tab, setTab]                   = useState<'input'|'daftar'>('input')
+  const [rapikan, setRapikan]           = useState(false)
+  const [loadingAssign, setLoadingAssign] = useState(false)
+  const activeKelasRef = useRef<Kelas | null>(null)
+
+  // Simpan activeKelas ke ref agar selalu up-to-date di callback
+  useEffect(() => { activeKelasRef.current = activeKelas }, [activeKelas])
+
+  // Load kelas — ingat kelas terakhir yang dipilih
   useEffect(() => {
     fetch('/api/kelas').then(r => r.json()).then((k: Kelas[]) => {
       setKelasList(k)
-      if (k.length) selectKelas(k[0])
+      if (!k.length) return
+      // Coba restore kelas terakhir dari localStorage
+      const lastId = typeof window !== 'undefined'
+        ? localStorage.getItem(STORAGE_KEY) : null
+      const last = lastId ? k.find(x => x.id === lastId) : null
+      selectKelas(last || k[0])
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const fetchSantri = async (kelasId: string): Promise<Santri[]> => {
+    const r = await fetch(`/api/santri?kelas_id=${kelasId}`, { cache: 'no-store' })
+    return r.json()
+  }
+
+  const selectKelas = async (k: Kelas) => {
+    setActiveKelas(k)
+    setEditMode(false)
+    setLoadingKelas(true)
+    setSantriList([])
+    setDraft([])
+    // Simpan kelas terakhir
+    if (typeof window !== 'undefined') localStorage.setItem(STORAGE_KEY, k.id)
+    const data = await fetchSantri(k.id)
+    setSantriList(data)
+    setDraft(data.map(s => ({ id: s.id, no_urut: s.no_urut, nama: s.nama, keterangan: s.keterangan })))
+    setLoadingKelas(false)
+  }
+
+  const reloadKelas = async () => {
+    const k = activeKelasRef.current
+    if (!k) return
+    setLoadingKelas(true)
+    const data = await fetchSantri(k.id)
+    setSantriList(data)
+    setDraft(data.map(s => ({ id: s.id, no_urut: s.no_urut, nama: s.nama, keterangan: s.keterangan })))
+    setEditMode(false)
+    setLoadingKelas(false)
+  }
 
   const parsePasteText = useCallback((text: string) => {
     const lines = text.split(/\r?\n/).filter(l => l.trim())
@@ -168,8 +200,7 @@ export default function SantriPage() {
       return [...prev, ...filled]
     })
     setEditMode(true)
-    setMsg(`✓ ${newRows.length} santri ditambahkan dari paste`)
-    setTimeout(() => setMsg(''), 3000)
+    flash(`✓ ${newRows.length} santri ditambahkan dari paste`)
   }, [])
 
   useEffect(() => {
@@ -183,28 +214,11 @@ export default function SantriPage() {
     return () => window.removeEventListener('paste', handler)
   }, [parsePasteText])
 
-  const selectKelas = async (k: Kelas) => {
-    setActiveKelas(k)
-    setEditMode(false)
-    setLoadingKelas(true)
-    setSantriList([])
-    setDraft([])
-    const r = await fetch(`/api/santri?kelas_id=${k.id}`)
-    const data: Santri[] = await r.json()
-    setSantriList(data)
-    setDraft(data.map(s => ({ id: s.id, no_urut: s.no_urut, nama: s.nama, keterangan: s.keterangan })))
-    setLoadingKelas(false)
-  }
-
   const hapusSantri = async (s: Santri) => {
     if (!confirm('Hapus ' + s.nama + '?\nData prestasi santri ini tidak ikut terhapus.')) return
     const res = await fetch(`/api/santri?id=${s.id}`, { method: 'DELETE' })
-    if (res.ok) {
-      flash('✓ ' + s.nama + ' dihapus')
-      if (activeKelas) await selectKelas(activeKelas)
-    } else {
-      flash('Error: gagal menghapus')
-    }
+    if (res.ok) { flash('✓ ' + s.nama + ' dihapus'); await reloadKelas() }
+    else flash('Error: gagal menghapus')
   }
 
   const addRow = () => {
@@ -237,14 +251,13 @@ export default function SantriPage() {
       })
       const d = await res.json()
       if (!res.ok) throw new Error(d.error)
-      setMsg(`✓ ${d.inserted} santri disimpan`)
-      setEditMode(false)
-      await selectKelas(activeKelas)
+      flash(`✓ ${d.inserted} santri disimpan`)
+      await reloadKelas()
     } catch (e: any) {
       setMsg('Error: ' + e.message)
+      setTimeout(() => setMsg(''), 4000)
     } finally {
       setSaving(false)
-      setTimeout(() => setMsg(''), 4000)
     }
   }
 
@@ -255,27 +268,23 @@ export default function SantriPage() {
     if (!confirm('Rapikan nomor urut santri di ' + activeKelas.nama + '?\nNomor akan diurutkan ulang dari 1.')) return
     setRapikan(true)
     try {
-      const r = await fetch(`/api/santri?kelas_id=${activeKelas.id}`)
-      const list: Santri[] = await r.json()
+      const list = await fetchSantri(activeKelas.id)
       const sorted = [...list].sort((a, b) => a.no_urut - b.no_urut)
-
-      // Step 1: set ke nomor sementara besar (99001, 99002...) agar tidak tabrakan
+      // Step 1: nomor sementara besar
       await Promise.all(sorted.map((s, idx) =>
         fetch(`/api/santri?id=${s.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ no_urut: 99000 + idx + 1 })
         })
       ))
-      // Step 2: set ke nomor final (1, 2, 3...)
+      // Step 2: nomor final
       await Promise.all(sorted.map((s, idx) =>
         fetch(`/api/santri?id=${s.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ no_urut: idx + 1 })
         })
       ))
-      await selectKelas(activeKelas)
+      await reloadKelas()
       flash('✓ Nomor urut berhasil dirapikan')
     } catch {
       flash('Error: gagal merapikan nomor urut')
@@ -285,14 +294,13 @@ export default function SantriPage() {
 
   return (
     <div>
-      {/* Modal pindah kelas */}
       {modalSantri && activeKelas && (
         <ModalPindahKelas
           santri={modalSantri}
           kelasList={kelasList}
           currentKelasId={activeKelas.id}
           onClose={() => setModalSantri(null)}
-          onSaved={() => { selectKelas(activeKelas); flash('✓ Santri berhasil dipindahkan') }}
+          onSaved={() => { reloadKelas(); flash('✓ Santri berhasil dipindahkan') }}
         />
       )}
 
@@ -325,7 +333,6 @@ export default function SantriPage() {
       </div>
 
       <div className="card rounded-tl-none mt-0">
-        {/* Sub-tab: Input / Daftar & Pindah */}
         <div className="flex gap-1 mb-4 bg-gray-100 p-1 rounded-lg w-fit">
           <button onClick={() => setTab('input')}
             className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors
@@ -346,10 +353,9 @@ export default function SantriPage() {
           </div>
         )}
 
-        {/* TAB: Input / Edit Nama */}
+        {/* TAB: Input */}
         {tab === 'input' && (
           <>
-            {/* Zona paste */}
             <div
               tabIndex={0}
               onFocus={() => setPasteActive(true)}
@@ -371,7 +377,6 @@ export default function SantriPage() {
               )}
             </div>
 
-            {/* Tabel input */}
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -383,52 +388,6 @@ export default function SantriPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {draft.map((row, i) => (
-                    <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 group">
-                      <td className="py-1 pr-2">
-                        <input type="number" min={1} className="input text-center w-16 py-1 text-sm"
-                          value={row.no_urut}
-                          onChange={e => updateDraft(i, 'no_urut', parseInt(e.target.value) || 1)} />
-                      </td>
-                      <td className="py-1 pr-2">
-                        <input className="input py-1 text-sm" placeholder="Nama santri..."
-                          value={row.nama}
-                          onChange={e => updateDraft(i, 'nama', e.target.value)} />
-                      </td>
-                      <td className="py-1 pr-2 hidden sm:table-cell">
-                        <input className="input py-1 text-sm text-gray-500" placeholder="—"
-                          value={row.keterangan}
-                          onChange={e => updateDraft(i, 'keterangan', e.target.value)} />
-                      </td>
-                      <td className="py-1 text-center">
-                        <div className="flex gap-1 justify-center opacity-0 group-hover:opacity-100 transition-all">
-                          <button onClick={() => removeRow(i)}
-                            className="w-6 h-6 rounded text-gray-300 hover:text-gray-500 hover:bg-gray-100
-                                       transition-all text-xl leading-none" title="Hapus dari daftar (belum disimpan)">
-                            ×
-                          </button>
-                          {santriList[i]?.id && (
-                            <button
-                              onClick={async () => {
-                                if (!confirm('Hapus ' + santriList[i].nama + '?\nData prestasi santri ini tidak ikut terhapus.')) return
-                                const res = await fetch(`/api/santri?id=${santriList[i].id}`, { method: 'DELETE' })
-                                if (res.ok) {
-                                  flash('✓ ' + santriList[i].nama + ' dihapus')
-                                  if (activeKelas) await selectKelas(activeKelas)
-                                } else {
-                                  flash('Error: gagal menghapus')
-                                }
-                              }}
-                              className="w-6 h-6 rounded text-red-300 hover:text-red-500 hover:bg-red-50
-                                         transition-all text-sm leading-none flex items-center justify-center"
-                              title="Hapus permanen dari database">
-                              🗑
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
                   {loadingKelas && (
                     <tr>
                       <td colSpan={4} className="py-8 text-center">
@@ -450,6 +409,45 @@ export default function SantriPage() {
                       </td>
                     </tr>
                   )}
+                  {draft.map((row, i) => (
+                    <tr key={row.id || i} className="border-b border-gray-50 hover:bg-gray-50 group">
+                      <td className="py-1 pr-2">
+                        <input type="number" min={1} className="input text-center w-16 py-1 text-sm"
+                          value={row.no_urut}
+                          onChange={e => updateDraft(i, 'no_urut', parseInt(e.target.value) || 1)} />
+                      </td>
+                      <td className="py-1 pr-2">
+                        <input className="input py-1 text-sm" placeholder="Nama santri..."
+                          value={row.nama}
+                          onChange={e => updateDraft(i, 'nama', e.target.value)} />
+                      </td>
+                      <td className="py-1 pr-2 hidden sm:table-cell">
+                        <input className="input py-1 text-sm text-gray-500" placeholder="—"
+                          value={row.keterangan}
+                          onChange={e => updateDraft(i, 'keterangan', e.target.value)} />
+                      </td>
+                      <td className="py-1 text-center">
+                        <div className="flex gap-1 justify-center opacity-0 group-hover:opacity-100 transition-all">
+                          <button onClick={() => removeRow(i)}
+                            className="w-6 h-6 rounded text-gray-300 hover:text-gray-500 hover:bg-gray-100
+                                       transition-all text-xl leading-none"
+                            title="Hapus dari daftar (belum disimpan)">×</button>
+                          {row.id && (
+                            <button
+                              onClick={async () => {
+                                if (!confirm('Hapus ' + row.nama + '?\nData prestasi santri ini tidak ikut terhapus.')) return
+                                const res = await fetch(`/api/santri?id=${row.id}`, { method: 'DELETE' })
+                                if (res.ok) { flash('✓ ' + row.nama + ' dihapus'); await reloadKelas() }
+                                else flash('Error: gagal menghapus')
+                              }}
+                              className="w-6 h-6 rounded text-red-300 hover:text-red-500 hover:bg-red-50
+                                         transition-all text-sm leading-none flex items-center justify-center"
+                              title="Hapus permanen">🗑</button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -466,10 +464,10 @@ export default function SantriPage() {
         {/* TAB: Pindah Kelas */}
         {tab === 'daftar' && (
           <div>
-            <p className="text-xs text-gray-500 mb-4">
-              Tap <strong>Pindah</strong> untuk pindah kelas. Data prestasi tidak terhapus.
-            </p>
-            <div className="flex justify-end mb-3">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs text-gray-500">
+                Tap <strong>Pindah</strong> untuk pindah kelas. Data prestasi tidak terhapus.
+              </p>
               <button onClick={rapikanNomor} disabled={rapikan}
                 className="btn text-xs py-1 text-amber-600 border-amber-200 hover:bg-amber-50 disabled:opacity-50">
                 {rapikan ? '⏳ Merapikan...' : '🔢 Rapikan Nomor Urut'}
@@ -503,7 +501,8 @@ export default function SantriPage() {
                     🔄 Pindah
                   </button>
                   <button onClick={() => hapusSantri(s)}
-                    className="btn text-xs py-1 text-red-400 border-red-200 hover:bg-red-50 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                    className="btn text-xs py-1 text-red-400 border-red-200 hover:bg-red-50
+                               flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                     🗑 Hapus
                   </button>
                 </div>
