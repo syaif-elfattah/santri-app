@@ -147,7 +147,11 @@ export default function SantriPage() {
   }, [])
 
   const fetchSantri = async (kelasId: string): Promise<Santri[]> => {
-    const r = await fetch(`/api/santri?kelas_id=${kelasId}`, { cache: 'no-store' })
+    const ts = Date.now()
+    const r = await fetch(`/api/santri?kelas_id=${kelasId}&_t=${ts}`, {
+      cache: 'no-store',
+      headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' }
+    })
     return r.json()
   }
 
